@@ -175,7 +175,7 @@ class RAGAgentBuilder:
         
         """
         rag_params = self._cache.rag_params
-        return rag_params.model_dump()
+        return rag_params.dict()
 
 
     def set_rag_params(self, **rag_params: Dict):
@@ -188,7 +188,7 @@ class RAGAgentBuilder:
             **rag_params (Dict): dictionary of RAG parameters. 
         
         """
-        new_dict = self._cache.rag_params.model_dump()
+        new_dict = self._cache.rag_params.dict()
         new_dict.update(rag_params)
         rag_params_obj = RAGParams(**new_dict)
         self._cache.rag_params = rag_params_obj
