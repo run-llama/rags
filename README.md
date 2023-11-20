@@ -7,6 +7,8 @@ You get to do the following:
 2. Go into the config view and view/alter generated parameters (top-k, summarization, etc.) as needed.
 3. Query the RAG agent over data with your questions.
 
+This project is inspired by [GPTs](https://openai.com/blog/introducing-gpts), launched by OpenAI.
+
 ## Installation and Setup 
 
 Clone this project, go into the `rags` project folder.
@@ -65,8 +67,3 @@ It will be able to pick the right RAG tools (either top-k vector search or optio
 ## Issues / Contributions
 
 Running into issues? Please file a Github issue or join our [Discord](https://discord.gg/dGcwcsnxhU).
-
-
-#### Extra: RAG Parameters
-
-Currently 
