@@ -61,36 +61,3 @@ if "agent_builder" in st.session_state.keys():
         st.info("Agent not created. Please create an agent in the above section.")
 else:
     st.info("Agent not created. Please create an agent in the above section.")
-            
-
-# if "cache" in st.session_state.keys() and "agent" in st.session_state.cache:
-#     cache = st.session_state.cache
-#     agent = cast(OpenAIAgent, st.session_state.cache["agent"])
-#     if "agent_messages" not in st.session_state.keys(): # Initialize the chat messages history
-#         st.session_state.agent_messages = [
-#             {"role": "assistant", "content": "Ask me a question!"}
-#         ]
-
-#     def add_to_message_history(role, content):
-#         message = {"role": role, "content": str(content)}
-#         st.session_state.messages.append(message) # Add response to message history
-
-#     for message in st.session_state.agent_messages: # Display the prior chat messages
-#         with st.chat_message(message["role"]):
-#             st.write(message["content"])
-
-#     # don't process selected for now
-#     if prompt := st.chat_input("Your question"): # Prompt for user input and save to chat history
-#         st.session_state.agent_messages.append({"role": "user", "content": prompt})
-
-#     # If last message is not from assistant, generate a new response
-#     if st.session_state.agent_messages[-1]["role"] != "assistant":
-#         with st.chat_message("assistant"):
-#             with st.spinner("Thinking..."):
-#                 response = agent.chat(prompt)
-#                 st.write(str(response))
-#                 add_to_message_history("assistant", response)
-
-# else:
-#     # show text saying "agent not created"
-#     st.info("Agent not created. Please create an agent in the above section.")

@@ -78,6 +78,7 @@ class ParamCache(BaseModel):
         arbitrary_types_allowed = True
 
     system_prompt: Optional[str] = Field(default=None, description="System prompt for RAG agent.")
+    file_paths: List[str] = Field(default_factory=list, description="File paths for RAG agent.")
     docs: List[Document] = Field(default_factory=list, description="Documents for RAG agent.")
     tools: List = Field(default_factory=list, description="Additional tools for RAG agent (e.g. web)")
     rag_params: RAGParams = Field(default_factory=RAGParams, description="RAG parameters for RAG agent.")
@@ -139,15 +140,18 @@ class RAGAgentBuilder:
         elif file_names is not None:
             reader = SimpleDirectoryReader(input_files=file_names)
             docs = reader.load_data()
+            file_paths = file_names
         elif urls is not None:
             from llama_hub.web.simple_web.base import SimpleWebPageReader
             # use simple web page reader from llamahub
             loader = SimpleWebPageReader()
             docs = loader.load_data(urls=urls)
+            file_paths = urls
         else:
             raise ValueError("Must specify either file_names or urls.")
         
         self._cache.docs = docs
+        self._cache.file_paths = file_paths
         return "Data loaded successfully."
 
 
