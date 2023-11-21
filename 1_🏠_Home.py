@@ -1,19 +1,14 @@
 import streamlit as st
-import os
-os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-
 from streamlit_pills import pills
 
 from agent_utils import (
     load_meta_agent_and_tools,
-    ParamCache
 )
 
 
 ####################
 #### STREAMLIT #####
 ####################
-
 
 
 st.set_page_config(page_title="Build a RAGs bot, powered by LlamaIndex", page_icon="🦙", layout="centered", initial_sidebar_state="auto", menu_items=None)
@@ -23,6 +18,13 @@ st.info(
     "Once the agent is finished creating, check out the `RAG Config` and `Generated RAG Agent` pages.", 
     icon="ℹ️"
 )
+
+# TODO: noodle on this
+# with st.sidebar:
+#     openai_api_key_st = st.text_input("OpenAI API Key (optional, not needed if you filled in secrets.toml)", value="", type="password")
+#     if st.button("Save"):
+#         # save api key
+#         st.session_state.openai_api_key = openai_api_key_st
 
 #### load builder agent and its tool spec (the agent_builder)
 builder_agent, agent_builder = load_meta_agent_and_tools()

@@ -17,6 +17,15 @@ Clone this project, go into the `rags` project folder.
 pip install -r requirements.txt
 ```
 
+By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
+Please `.streamlit/secrets.toml` in the home folder.
+
+Then put the following:
+```
+openai_key = "<openai_key>"
+```
+
+
 Then run the app from the "home page" file.
 
 ```
@@ -62,6 +71,24 @@ Once your RAG agent is created, you have access to this page.
 This is a standard chatbot interface where you can query the RAG agent and it will answer questions over your data.
 
 It will be able to pick the right RAG tools (either top-k vector search or optionally summarization) in order to fulfill the query.
+
+
+## Supported LLMs and Embeddings
+
+### Builder Agent
+
+By default the builder agent uses OpenAI. This is defined in the `builder_config.py` file.
+
+You can customize this to whatever LLM you want (an example is provided for Anthropic).
+
+Note that GPT-4 variants will give the most reliable results in terms of actually constructing an agent (we couldn't get Claude to work).
+
+### Generated RAG Agent
+
+You can set the configuration either through natural language or manually for both the embedding model and LLM.
+
+- **LLM**: Currently only OpenAI LLMs are supported (conceptually we can support other LLMs but just need to figure out how to map names to LLM configurations)
+- **Embeddings**: Supports text-embedding-ada-002 by default, but also supports Hugging Face models. To use a hugging face model simply prepend with local, e.g. local:BAAI/bge-small-en.
 
 
 ## Issues / Contributions
