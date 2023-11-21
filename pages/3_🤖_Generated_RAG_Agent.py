@@ -1,8 +1,5 @@
 """Streamlit page showing builder config."""
-import os
 import streamlit as st
-os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-import openai
 from streamlit_pills import pills
 from typing import cast
 from llama_index.agent.openai_agent import OpenAIAgent
