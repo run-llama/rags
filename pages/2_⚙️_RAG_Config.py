@@ -3,7 +3,6 @@ import streamlit as st
 import openai
 from streamlit_pills import pills
 from typing import cast
-from llama_index.agent.openai_agent import OpenAIAgent
 
 from agent_utils import (
     RAGParams,

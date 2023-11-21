@@ -1,8 +1,6 @@
 """Streamlit page showing builder config."""
 import streamlit as st
-from streamlit_pills import pills
 from typing import cast
-from llama_index.agent.openai_agent import OpenAIAgent
 from agent_utils import (
     RAGAgentBuilder,
 )

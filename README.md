@@ -81,7 +81,7 @@ By default the builder agent uses OpenAI. This is defined in the `builder_config
 
 You can customize this to whatever LLM you want (an example is provided for Anthropic).
 
-Note that GPT-4 variants will give the most reliable results in terms of actually constructing an agent.
+Note that GPT-4 variants will give the most reliable results in terms of actually constructing an agent (we couldn't get Claude to work).
 
 ### Generated RAG Agent
 
