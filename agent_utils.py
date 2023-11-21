@@ -1,9 +1,10 @@
 from llama_index.llms import OpenAI, ChatMessage
+from llama_index.llms.base import LLM
 from llama_index.llms.utils import resolve_llm
 from pydantic import BaseModel, Field
 import os
 from llama_index.tools.query_engine import QueryEngineTool
-from llama_index.agent import OpenAIAgent
+from llama_index.agent import OpenAIAgent, ReActAgent
 from llama_index import (
     VectorStoreIndex,
     SummaryIndex,
@@ -15,8 +16,14 @@ from typing import List, cast, Optional
 from llama_index import SimpleDirectoryReader
 from llama_index.embeddings.utils import resolve_embed_model
 from llama_index.tools import QueryEngineTool, ToolMetadata, FunctionTool
-from typing import Dict, Tuple
+from llama_index.agent.types import BaseAgent
+from llama_index.agent.react.formatter import ReActChatFormatter
+from llama_index.llms.openai_utils import is_function_calling_model
+from builder_config import BUILDER_LLM
+from typing import Dict, Tuple, Any
 import streamlit as st
+from pathlib import Path
+import json
 
 
 ####################
@@ -48,6 +55,33 @@ gen_sys_prompt_messages = [
 ]
 
 GEN_SYS_PROMPT_TMPL = ChatPromptTemplate(gen_sys_prompt_messages)
+
+
+def load_agent(
+    tools: List, 
+    llm: LLM, 
+    system_prompt: str,
+    **kwargs: Any
+) -> BaseAgent:
+    """Load agent."""
+    if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
+        # get OpenAI Agent
+        agent = OpenAIAgent.from_tools(
+            tools=tools,
+            llm=llm,
+            system_prompt=system_prompt,
+            **kwargs
+        )
+    else:
+        agent = ReActAgent.from_tools(
+            tools=tools,
+            llm=llm,
+            react_chat_formatter=ReActChatFormatter(
+                system_header=system_prompt,
+            ),
+            **kwargs
+        )
+    return agent
 
 
 class RAGParams(BaseModel):
@@ -252,12 +286,10 @@ class RAGAgentBuilder:
         if self._cache.system_prompt is None:
             return "System prompt not set yet. Please set system prompt first."
 
-        agent = OpenAIAgent.from_tools(
-            tools=all_tools,
-            system_prompt=self._cache.system_prompt,
-            llm=llm,
-            verbose=True
+        agent = load_agent(
+            all_tools, llm=llm, system_prompt=self._cache.system_prompt, verbose=True
         )
+
         self._cache.agent = agent
         return "Agent created successfully."
 
@@ -284,10 +316,14 @@ have available (e.g. "Do you want to set the number of documents to retrieve?")
 """
 
 
+### DEFINE Agent ####
+# NOTE: here we define a function that is dependent on the LLM,
+# please make sure to update the LLM above if you change the function below
+
+
 # define agent
 @st.cache_resource
 def load_meta_agent_and_tools() -> Tuple[OpenAIAgent, RAGAgentBuilder]:
-    prefix_msgs = [ChatMessage(role="system", content=RAG_BUILDER_SYS_STR)]
 
     # think of this as tools for the agent to use
     agent_builder = RAGAgentBuilder()
@@ -302,11 +338,9 @@ def load_meta_agent_and_tools() -> Tuple[OpenAIAgent, RAGAgentBuilder]:
     ]
     fn_tools = [FunctionTool.from_defaults(fn=fn) for fn in fns]
 
-    builder_agent = OpenAIAgent.from_tools(
-        tools=fn_tools,
-        llm=OpenAI(llm="gpt-4-1106-preview"),
-        prefix_messages=prefix_msgs,
-        verbose=True,
+    builder_agent = load_agent(
+        fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True
     )
+
     return builder_agent, agent_builder
     

@@ -15,7 +15,6 @@ from agent_utils import (
 ####################
 
 
-
 st.set_page_config(page_title="Build a RAGs bot, powered by LlamaIndex", page_icon="🦙", layout="centered", initial_sidebar_state="auto", menu_items=None)
 st.title("Build a RAGs bot, powered by LlamaIndex 💬🦙")
 st.info(
