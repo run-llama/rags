@@ -1,10 +1,11 @@
-from llama_index.llms import OpenAI, ChatMessage
+from llama_index.llms import OpenAI, ChatMessage, Anthropic, Replicate
 from llama_index.llms.base import LLM
 from llama_index.llms.utils import resolve_llm
 from pydantic import BaseModel, Field
 import os
 from llama_index.tools.query_engine import QueryEngineTool
 from llama_index.agent import OpenAIAgent, ReActAgent
+from llama_index.agent.react.prompts import REACT_CHAT_SYSTEM_HEADER
 from llama_index import (
     VectorStoreIndex,
     SummaryIndex,
@@ -24,6 +25,32 @@ from typing import Dict, Tuple, Any
 import streamlit as st
 from pathlib import Path
 import json
+
+
+def _resolve_llm(llm: str) -> LLM:
+    """Resolve LLM."""
+    # TODO: make this less hardcoded with if-else statements
+    # see if there's a prefix
+    # - if there isn't, assume it's an OpenAI model
+    # - if there is, resolve it
+    tokens = llm.split(":")
+    if len(tokens) == 1:
+        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        llm = OpenAI(model=llm)
+    elif tokens[0] == "local":
+        llm = resolve_llm(llm)
+    elif tokens[0] == "openai":
+        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        llm = OpenAI(model=tokens[1])
+    elif tokens[0] == "anthropic":
+        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
+        llm = Anthropic(model=tokens[1])
+    elif tokens[0] == "replicate":
+        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
+        llm = Replicate(model=tokens[1])
+    else:
+        raise ValueError(f"LLM {llm} not recognized.")
+    return llm
 
 
 ####################
@@ -77,7 +104,7 @@ def load_agent(
             tools=tools,
             llm=llm,
             react_chat_formatter=ReActChatFormatter(
-                system_header=system_prompt,
+                system_header=system_prompt + "\n" + REACT_CHAT_SYSTEM_HEADER,
             ),
             **kwargs
         )
@@ -143,7 +170,7 @@ class RAGAgentBuilder:
 
     def create_system_prompt(self, task: str) -> str:
         """Create system prompt for another agent given an input task."""
-        llm = OpenAI(model="gpt-4-1106-preview")
+        llm = BUILDER_LLM
         fmt_messages = GEN_SYS_PROMPT_TMPL.format_messages(task=task)
         response = llm.chat(fmt_messages)
         self._cache.system_prompt = response.message.content
@@ -247,7 +274,8 @@ class RAGAgentBuilder:
         embed_model = resolve_embed_model(rag_params.embed_model)
         # llm = resolve_llm(rag_params.llm)
         # TODO: use OpenAI for now
-        llm = OpenAI(model=rag_params.llm)
+        # llm = OpenAI(model=rag_params.llm)
+        llm = _resolve_llm(rag_params.llm)
 
         # first let's index the data with the right parameters
         service_context = ServiceContext.from_defaults(

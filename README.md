@@ -87,7 +87,11 @@ Note that GPT-4 variants will give the most reliable results in terms of actuall
 
 You can set the configuration either through natural language or manually for both the embedding model and LLM.
 
-- **LLM**: Currently only OpenAI LLMs are supported (conceptually we can support other LLMs but just need to figure out how to map names to LLM configurations)
+- **LLM**: We support the following LLMs, but you need to explicitly specify the ID to the builder agent.
+    - OpenAI: ID is "openai:<model_name>" e.g. "openai:gpt-4-1106-preview"
+    - Anthropic: ID is "anthropic:<model_name>" e.g. "anthropic:claude-2"
+    - Replicate: ID is "replicate:<model_name>"
+    - HuggingFace: ID is "local:<model_name>" e.g. "local:BAAI/bge-small-en"
 - **Embeddings**: Supports text-embedding-ada-002 by default, but also supports Hugging Face models. To use a hugging face model simply prepend with local, e.g. local:BAAI/bge-small-en.
 
 
