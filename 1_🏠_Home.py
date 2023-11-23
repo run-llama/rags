@@ -1,10 +1,9 @@
+import asyncio
+
 import streamlit as st
 from streamlit_pills import pills
 
-from agent_utils import (
-    load_meta_agent_and_tools,
-)
-
+from agent_utils import load_meta_agent_and_tools
 
 ####################
 #### STREAMLIT #####
@@ -18,6 +17,16 @@ st.info(
     "Once the agent is finished creating, check out the `RAG Config` and `Generated RAG Agent` pages.", 
     icon="ℹ️"
 )
+
+# Streamlit runs in a separate thread that doesn’t have an event loop by default
+# Create an event loop and run the async functions inside it
+try:
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    if loop.is_closed():
+        raise RuntimeError
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
 # TODO: noodle on this
 # with st.sidebar:
@@ -65,9 +74,17 @@ if prompt := st.chat_input("Your question"): # Prompt for user input and save to
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = st.session_state.builder_agent.chat(prompt)
-            st.write(str(response))
-            add_to_message_history("assistant", response)
+            message_placeholder = st.empty() # Container for the response that's overwritten with each token
+            async def generate_response():
+                full_response = ""
+                response = st.session_state.builder_agent.stream_chat(prompt) # Stream responses to the frontend
+                for token in response.response_gen:
+                    full_response += token or ""
+                    message_placeholder.markdown(full_response)
+                return full_response
+            
+            full_response = asyncio.run(generate_response())
+            add_to_message_history("assistant", full_response)
 
 # # check cache
 print(st.session_state.agent_builder.cache)
