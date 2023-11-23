@@ -3,6 +3,11 @@ from streamlit_pills import pills
 
 from agent_utils import (
     load_meta_agent_and_tools,
+    ParamCache,
+    load_caches_from_directory
+)
+from constants import (
+    AGENT_CACHE_DIR,
 )
 
 
@@ -19,57 +24,74 @@ st.info(
     icon="ℹ️"
 )
 
-# TODO: noodle on this
-# with st.sidebar:
-#     openai_api_key_st = st.text_input("OpenAI API Key (optional, not needed if you filled in secrets.toml)", value="", type="password")
-#     if st.button("Save"):
-#         # save api key
-#         st.session_state.openai_api_key = openai_api_key_st
+## define sidebar
+def update_selected_agent():
+    selected_id = st.session_state.agent_selector
+    st.session_state.selected_id = selected_id if selected_id != "Create a new agent" else None
 
-#### load builder agent and its tool spec (the agent_builder)
-builder_agent, agent_builder = load_meta_agent_and_tools()
+st.session_state.selected_id = None 
+with st.sidebar:
+    cache_dict = load_caches_from_directory(AGENT_CACHE_DIR)
+    # update cache dict
+    st.session_state.cache_dict = cache_dict
+    # get agents from agent_cache
+    agent_ids = [c.agent_id for c in cache_dict.values()]
+    choices = ["Create a new agent"] + agent_ids
+    # display buttons 
+    st.radio(
+        "Agents", choices, index=0, on_change=update_selected_agent, key="agent_selector"
+    )
+    # st.session_state.selected_id = selected_id if selected_id != "Create a new agent" else None
+        
 
-if "builder_agent" not in st.session_state.keys():
-    st.session_state.builder_agent = builder_agent
-if "agent_builder" not in st.session_state.keys():
-    st.session_state.agent_builder = agent_builder
+if st.session_state.selected_id is None:
+    #### load builder agent and its tool spec (the agent_builder)
+    builder_agent, agent_builder = load_meta_agent_and_tools()
 
-# add pills
-selected = pills(
-    "Outline your task!", 
-    ["I want to analyze this PDF file (data/invoices.pdf)", 
-     "I want to search over my CSV documents."
-    ], clearable=True, index=None
-)
+    if "builder_agent" not in st.session_state.keys():
+        st.session_state.builder_agent = builder_agent
+    if "agent_builder" not in st.session_state.keys():
+        st.session_state.agent_builder = agent_builder
 
-if "messages" not in st.session_state.keys(): # Initialize the chat messages history
-    st.session_state.messages = [
-        {"role": "assistant", "content": "What RAG bot do you want to build?"}
-    ]
+    # add pills
+    selected = pills(
+        "Outline your task!", 
+        ["I want to analyze this PDF file (data/invoices.pdf)", 
+        "I want to search over my CSV documents."
+        ], clearable=True, index=None
+    )
 
-def add_to_message_history(role, content):
-    message = {"role": role, "content": str(content)}
-    st.session_state.messages.append(message) # Add response to message history
+    if "messages" not in st.session_state.keys(): # Initialize the chat messages history
+        st.session_state.messages = [
+            {"role": "assistant", "content": "What RAG bot do you want to build?"}
+        ]
 
-for message in st.session_state.messages: # Display the prior chat messages
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    def add_to_message_history(role, content):
+        message = {"role": role, "content": str(content)}
+        st.session_state.messages.append(message) # Add response to message history
 
-# handle user input
-if prompt := st.chat_input("Your question"): # Prompt for user input and save to chat history
-    add_to_message_history("user", prompt)
-    with st.chat_message("user"):
-        st.write(prompt)
+    for message in st.session_state.messages: # Display the prior chat messages
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
-# If last message is not from assistant, generate a new response
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = st.session_state.builder_agent.chat(prompt)
-            st.write(str(response))
-            add_to_message_history("assistant", response)
+    # handle user input
+    if prompt := st.chat_input("Your question"): # Prompt for user input and save to chat history
+        add_to_message_history("user", prompt)
+        with st.chat_message("user"):
+            st.write(prompt)
 
-# # check cache
-print(st.session_state.agent_builder.cache)
-# if "agent" in cache:
-#     st.session_state.agent = cache["agent"]
+    # If last message is not from assistant, generate a new response
+    if st.session_state.messages[-1]["role"] != "assistant":
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = st.session_state.builder_agent.chat(prompt)
+                st.write(str(response))
+                add_to_message_history("assistant", response)
+
+    # # check cache
+    print(st.session_state.agent_builder.cache)
+    # if "agent" in cache:
+    #     st.session_state.agent = cache["agent"]
+
+else:
+    st.info("To build a new agent, please make sure that 'Create a new agent' is selected.")

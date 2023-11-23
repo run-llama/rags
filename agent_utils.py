@@ -25,6 +25,8 @@ from typing import Dict, Tuple, Any
 import streamlit as st
 from pathlib import Path
 import json
+import uuid
+from constants import AGENT_CACHE_DIR
 
 
 def _resolve_llm(llm: str) -> LLM:
@@ -111,6 +113,12 @@ def load_agent(
     return agent
 
 
+def build_agent_from_indices():
+    """Build agent from indices."""
+    pass
+
+
+
 class RAGParams(BaseModel):
     """RAG parameters.
 
@@ -138,13 +146,69 @@ class ParamCache(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    # system prompt
     system_prompt: Optional[str] = Field(default=None, description="System prompt for RAG agent.")
-    file_paths: List[str] = Field(default_factory=list, description="File paths for RAG agent.")
+    # data
+    file_names: List[str] = Field(default_factory=list, description="File names as data source (if specified)")
+    urls: List[str] = Field(default_factory=list, description="URLs as data source (if specified)")
     docs: List[Document] = Field(default_factory=list, description="Documents for RAG agent.")
+    # tools
     tools: List = Field(default_factory=list, description="Additional tools for RAG agent (e.g. web)")
+    # RAG params
     rag_params: RAGParams = Field(default_factory=RAGParams, description="RAG parameters for RAG agent.")
+
+    # agent params
+    agent_id: Optional[str] = Field(default=None, description="Agent ID for RAG agent.")
     agent: Optional[OpenAIAgent] = Field(default=None, description="RAG agent.")
 
+    def save_to_disk(self, save_path: str) -> None:
+        """Save cache to disk."""
+        # NOTE: more complex than just calling dict() because we want to
+        # only store serializable fields and be space-efficient
+
+        dict_to_serialize = {
+            "system_prompt": self.system_prompt,
+            "file_names": self.file_names,
+            "urls": self.urls,
+            # TODO: figure out tools
+            # "tools": [],
+            "rag_params": self.rag_params.dict(),
+            "agent_id": self.agent_id,
+        }
+        # store the vector store within the agent
+        
+
+        
+
+        # if save_path directories don't exist, create it
+        if not Path(save_path).parent.exists():
+            Path(save_path).parent.mkdir(parents=True)
+        with open(save_path, "w") as f:
+            json.dump(self.dict(), f)
+
+    @classmethod
+    def load_from_disk(
+        cls,
+        save_path: str,
+    ) -> "ParamCache":
+        """Load cache from disk."""
+        with open(save_path, "r") as f:
+            cache_dict = json.load(f)
+        return cls(**cache_dict)
+
+
+def load_caches_from_directory(dir: str) -> Dict[str, ParamCache]:
+    """Load caches from directory."""
+    if not Path(dir).exists():
+        return {}
+    files = [f for f in Path(dir).iterdir() if f.is_file() and ".json" in f.suffix]
+    caches = [ParamCache.load_from_file(f) for f in files]
+    # map agent_id to cache
+    # if any caches have None as agent_id, raise error
+    if any([c.agent_id is None for c in caches]):
+        raise ValueError("Some caches do not have an agent_id.")
+    cache_dict = {c.agent_id: c for c in caches}
+    return cache_dict
 
 
 class RAGAgentBuilder:
@@ -201,18 +265,17 @@ class RAGAgentBuilder:
         elif file_names is not None:
             reader = SimpleDirectoryReader(input_files=file_names)
             docs = reader.load_data()
-            file_paths = file_names
         elif urls is not None:
             from llama_hub.web.simple_web.base import SimpleWebPageReader
             # use simple web page reader from llamahub
             loader = SimpleWebPageReader()
             docs = loader.load_data(urls=urls)
-            file_paths = urls
         else:
             raise ValueError("Must specify either file_names or urls.")
         
         self._cache.docs = docs
-        self._cache.file_paths = file_paths
+        self._cache.file_names = file_names
+        self._cache.urls = urls
         return "Data loaded successfully."
 
 
@@ -260,13 +323,17 @@ class RAGAgentBuilder:
         return "RAG parameters set successfully."
 
 
-    def create_agent(self) -> None:
+    def create_agent(self, agent_id: Optional[str] = None) -> None:
         """Create an agent.
 
         There are no parameters for this function because all the
         functions should have already been called to set up the agent.
         
         """
+        # if agent_id not specified, randomly generate one
+        agent_id = agent_id or f"Agent {uuid.uuid4()}"
+        self._cache.agent_id = agent_id
+
         rag_params = cast(RAGParams, self._cache.rag_params)
         docs = self._cache.docs
 
@@ -319,6 +386,11 @@ class RAGAgentBuilder:
         )
 
         self._cache.agent = agent
+
+        # save the cache to disk
+        agent_cache_path = f"{AGENT_CACHE_DIR}/{agent_id}.json"
+        self._cache.save_to_disk(agent_cache_path)
+
         return "Agent created successfully."
 
 
