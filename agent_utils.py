@@ -20,6 +20,7 @@ from llama_index.tools import QueryEngineTool, ToolMetadata, FunctionTool
 from llama_index.agent.types import BaseAgent
 from llama_index.agent.react.formatter import ReActChatFormatter
 from llama_index.llms.openai_utils import is_function_calling_model
+from llama_index.chat_engine import CondensePlusContextChatEngine
 from builder_config import BUILDER_LLM
 from typing import Dict, Tuple, Any
 import streamlit as st
@@ -88,9 +89,11 @@ def load_agent(
     tools: List, 
     llm: LLM, 
     system_prompt: str,
+    extra_kwargs: Optional[Dict] = None,
     **kwargs: Any
 ) -> BaseAgent:
     """Load agent."""
+    extra_kwargs = extra_kwargs or {}
     if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
         # get OpenAI Agent
         agent = OpenAIAgent.from_tools(
@@ -100,14 +103,15 @@ def load_agent(
             **kwargs
         )
     else:
-        agent = ReActAgent.from_tools(
-            tools=tools,
-            llm=llm,
-            react_chat_formatter=ReActChatFormatter(
-                system_header=system_prompt + "\n" + REACT_CHAT_SYSTEM_HEADER,
-            ),
-            **kwargs
+        if "vector_index" not in extra_kwargs:
+            raise ValueError("Must pass in vector index for CondensePlusContextChatEngine.")
+        vector_index = cast(VectorStoreIndex, extra_kwargs["vector_index"])
+        rag_params = cast(RAGParams, extra_kwargs["rag_params"])
+        # use condense + context chat engine
+        agent = CondensePlusContextChatEngine.from_defaults(
+            vector_index.as_retriever(similarity_top_k=rag_params.top_k),
         )
+        
     return agent
 
 
@@ -117,7 +121,7 @@ class RAGParams(BaseModel):
     Parameters used to configure a RAG pipeline.
     
     """
-    include_summarization: bool = Field(default=False, description="Whether to include summarization in the RAG pipeline.")
+    include_summarization: bool = Field(default=False, description="Whether to include summarization in the RAG pipeline. (only for GPT-4)")
     top_k: int = Field(default=2, description="Number of documents to retrieve from vector store.")
     chunk_size: int = Field(default=1024, description="Chunk size for vector store.")
     embed_model: str = Field(
@@ -315,7 +319,8 @@ class RAGAgentBuilder:
             return "System prompt not set yet. Please set system prompt first."
 
         agent = load_agent(
-            all_tools, llm=llm, system_prompt=self._cache.system_prompt, verbose=True
+            all_tools, llm=llm, system_prompt=self._cache.system_prompt, verbose=True,
+            extra_kwargs={"vector_index": vector_index, "rag_params": rag_params}
         )
 
         self._cache.agent = agent
