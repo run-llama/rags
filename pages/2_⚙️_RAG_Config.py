@@ -36,7 +36,7 @@ if "agent_builder" in st.session_state.keys():
         value=",".join(agent_builder.cache.file_paths),
         disabled=True
     )
-    include_summarization_st = st.checkbox("Include Summarization", value=rag_params.include_summarization)
+    include_summarization_st = st.checkbox("Include Summarization (only works for GPT-4)", value=rag_params.include_summarization)
     top_k_st = st.number_input("Top K", value=rag_params.top_k)
     chunk_size_st = st.number_input("Chunk Size", value=rag_params.chunk_size)
     embed_model_st = st.text_input("Embed Model", value=rag_params.embed_model)
