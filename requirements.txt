@@ -4,3 +4,4 @@ llama-index==0.9.4
 llama-hub==0.0.44
 # NOTE: this is due to a trivial dependency in the web tool, will refactor
 langchain==0.0.305
+pypdf
