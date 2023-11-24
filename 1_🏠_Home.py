@@ -3,9 +3,10 @@ from streamlit_pills import pills
 
 from agent_utils import (
     load_meta_agent_and_tools,
-    ParamCache,
-    load_caches_from_directory
+    load_agent_ids_from_directory,
+    load_cache_from_directory
 )
+from st_utils import add_sidebar
 from constants import (
     AGENT_CACHE_DIR,
 )
@@ -24,27 +25,11 @@ st.info(
     icon="ℹ️"
 )
 
-## define sidebar
-def update_selected_agent():
-    selected_id = st.session_state.agent_selector
-    st.session_state.selected_id = selected_id if selected_id != "Create a new agent" else None
 
-st.session_state.selected_id = None 
-with st.sidebar:
-    cache_dict = load_caches_from_directory(AGENT_CACHE_DIR)
-    # update cache dict
-    st.session_state.cache_dict = cache_dict
-    # get agents from agent_cache
-    agent_ids = [c.agent_id for c in cache_dict.values()]
-    choices = ["Create a new agent"] + agent_ids
-    # display buttons 
-    st.radio(
-        "Agents", choices, index=0, on_change=update_selected_agent, key="agent_selector"
-    )
-    # st.session_state.selected_id = selected_id if selected_id != "Create a new agent" else None
+add_sidebar()
         
 
-if st.session_state.selected_id is None:
+if "selected_id" not in st.session_state or st.session_state.selected_id is None:
     #### load builder agent and its tool spec (the agent_builder)
     builder_agent, agent_builder = load_meta_agent_and_tools()
 
@@ -88,8 +73,16 @@ if st.session_state.selected_id is None:
                 st.write(str(response))
                 add_to_message_history("assistant", response)
 
+                # check agent_ids again, if it doesn't match, add to directory and refresh
+                agent_ids = load_agent_ids_from_directory(AGENT_CACHE_DIR)
+                # check diff between agent_ids and cur agent ids
+                diff_ids = list(set(agent_ids) - set(st.session_state.cur_agent_ids))
+                if len(diff_ids) > 0:
+                    # trigger refresh
+                    st.rerun()
+
     # # check cache
-    print(st.session_state.agent_builder.cache)
+    # print(st.session_state.agent_builder.cache)
     # if "agent" in cache:
     #     st.session_state.agent = cache["agent"]
 

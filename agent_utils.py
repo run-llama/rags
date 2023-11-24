@@ -10,7 +10,9 @@ from llama_index import (
     VectorStoreIndex,
     SummaryIndex,
     ServiceContext,
-    Document
+    StorageContext,
+    Document,
+    load_index_from_storage
 )
 from llama_index.prompts import ChatPromptTemplate
 from typing import List, cast, Optional
@@ -87,6 +89,46 @@ gen_sys_prompt_messages = [
 GEN_SYS_PROMPT_TMPL = ChatPromptTemplate(gen_sys_prompt_messages)
 
 
+class RAGParams(BaseModel):
+    """RAG parameters.
+
+    Parameters used to configure a RAG pipeline.
+    
+    """
+    include_summarization: bool = Field(default=False, description="Whether to include summarization in the RAG pipeline. (only for GPT-4)")
+    top_k: int = Field(default=2, description="Number of documents to retrieve from vector store.")
+    chunk_size: int = Field(default=1024, description="Chunk size for vector store.")
+    embed_model: str = Field(
+        default="default", description="Embedding model to use (default is OpenAI)"
+    )
+    llm: str = Field(default="gpt-4-1106-preview", description="LLM to use for summarization.")
+
+
+def load_data(
+    file_names: Optional[List[str]] = None,
+    urls: Optional[List[str]] = None
+) -> List[Document]:
+    """Load data."""
+    file_names = file_names or []
+    urls = urls or []
+    if not file_names and not urls:
+        raise ValueError("Must specify either file_names or urls.")
+    elif file_names and urls:
+        raise ValueError("Must specify only one of file_names or urls.")
+    elif file_names:
+        reader = SimpleDirectoryReader(input_files=file_names)
+        docs = reader.load_data()
+    elif urls:
+        from llama_hub.web.simple_web.base import SimpleWebPageReader
+        # use simple web page reader from llamahub
+        loader = SimpleWebPageReader()
+        docs = loader.load_data(urls=urls)
+    else:
+        raise ValueError("Must specify either file_names or urls.")
+
+    return docs
+
+
 def load_agent(
     tools: List, 
     llm: LLM, 
@@ -117,25 +159,73 @@ def load_agent(
     return agent
 
 
-def build_agent_from_indices():
-    """Build agent from indices."""
-    pass
+def construct_agent(
+    system_prompt: str,
+    rag_params: RAGParams,
+    docs: List[Document],
+    vector_index: Optional[VectorStoreIndex] = None,
+    additional_tools: Optional[List] = None,
+) -> Tuple[BaseAgent, Dict]:
+    """Construct agent from docs / parameters / indices."""
+    extra_info = {}
+    additional_tools = additional_tools or []
 
+    # first resolve llm and embedding model
+    embed_model = resolve_embed_model(rag_params.embed_model)
+    # llm = resolve_llm(rag_params.llm)
+    # TODO: use OpenAI for now
+    # llm = OpenAI(model=rag_params.llm)
+    llm = _resolve_llm(rag_params.llm)
 
-
-class RAGParams(BaseModel):
-    """RAG parameters.
-
-    Parameters used to configure a RAG pipeline.
-    
-    """
-    include_summarization: bool = Field(default=False, description="Whether to include summarization in the RAG pipeline. (only for GPT-4)")
-    top_k: int = Field(default=2, description="Number of documents to retrieve from vector store.")
-    chunk_size: int = Field(default=1024, description="Chunk size for vector store.")
-    embed_model: str = Field(
-        default="default", description="Embedding model to use (default is OpenAI)"
+    # first let's index the data with the right parameters
+    service_context = ServiceContext.from_defaults(
+        chunk_size=rag_params.chunk_size,
+        llm=llm,
+        embed_model=embed_model,
     )
-    llm: str = Field(default="gpt-4-1106-preview", description="LLM to use for summarization.")
+
+    if vector_index is None:
+        vector_index = VectorStoreIndex.from_documents(docs, service_context=service_context)
+    else:
+        pass
+        
+    extra_info["vector_index"] = vector_index
+
+    vector_query_engine = vector_index.as_query_engine(similarity_top_k=rag_params.top_k)
+    all_tools = []
+    vector_tool = QueryEngineTool(
+        query_engine=vector_query_engine,
+        metadata=ToolMetadata(
+            name="vector_tool",
+            description=("Use this tool to answer any user question over any data."),
+        ),
+    )
+    all_tools.append(vector_tool)
+    if rag_params.include_summarization:
+        summary_index = SummaryIndex.from_documents(docs, service_context=service_context)
+        summary_query_engine = summary_index.as_query_engine()
+        summary_tool = QueryEngineTool(
+            query_engine=summary_query_engine,
+            metadata=ToolMetadata(
+                name="summary_tool",
+                description=("Use this tool for any user questions that ask for a summarization of content"),
+            ),
+        )
+        all_tools.append(summary_tool)
+    
+    
+    # then we add tools
+    all_tools.extend(additional_tools)
+
+    # build agent
+    if system_prompt is None:
+        return "System prompt not set yet. Please set system prompt first."
+
+    agent = load_agent(
+        all_tools, llm=llm, system_prompt=system_prompt, verbose=True,
+        extra_kwargs={"vector_index": vector_index, "rag_params": rag_params}
+    )
+    return agent, extra_info
 
 
 class ParamCache(BaseModel):
@@ -155,17 +245,18 @@ class ParamCache(BaseModel):
     # data
     file_names: List[str] = Field(default_factory=list, description="File names as data source (if specified)")
     urls: List[str] = Field(default_factory=list, description="URLs as data source (if specified)")
-    docs: List[Document] = Field(default_factory=list, description="Documents for RAG agent.")
+    docs: List = Field(default_factory=list, description="Documents for RAG agent.")
     # tools
     tools: List = Field(default_factory=list, description="Additional tools for RAG agent (e.g. web)")
     # RAG params
     rag_params: RAGParams = Field(default_factory=RAGParams, description="RAG parameters for RAG agent.")
 
     # agent params
+    vector_index: Optional[VectorStoreIndex] = Field(default=None, description="Vector index for RAG agent.")
     agent_id: Optional[str] = Field(default=None, description="Agent ID for RAG agent.")
     agent: Optional[OpenAIAgent] = Field(default=None, description="RAG agent.")
 
-    def save_to_disk(self, save_path: str) -> None:
+    def save_to_disk(self, save_dir: str) -> None:
         """Save cache to disk."""
         # NOTE: more complex than just calling dict() because we want to
         # only store serializable fields and be space-efficient
@@ -180,39 +271,120 @@ class ParamCache(BaseModel):
             "agent_id": self.agent_id,
         }
         # store the vector store within the agent
-        
-
-        
+        if self.vector_index is None:
+            raise ValueError("Must specify vector index in order to save.")
+        self.vector_index.storage_context.persist(Path(save_dir) / "storage")
 
         # if save_path directories don't exist, create it
-        if not Path(save_path).parent.exists():
-            Path(save_path).parent.mkdir(parents=True)
-        with open(save_path, "w") as f:
-            json.dump(self.dict(), f)
+        if not Path(save_dir).exists():
+            Path(save_dir).mkdir(parents=True)
+        with open(Path(save_dir) / "cache.json", "w") as f:
+            json.dump(dict_to_serialize, f)
 
     @classmethod
     def load_from_disk(
         cls,
-        save_path: str,
+        save_dir: str,
     ) -> "ParamCache":
         """Load cache from disk."""
-        with open(save_path, "r") as f:
+        storage_context = StorageContext.from_defaults(persist_dir=Path(save_dir) / "storage")
+        vector_index = load_index_from_storage(storage_context)
+
+        with open(Path(save_dir) / "cache.json", "r") as f:
             cache_dict = json.load(f)
+
+        # replace rag params with RAGParams object
+        cache_dict["rag_params"] = RAGParams(**cache_dict["rag_params"])
+
+        # add in the missing fields
+        # load docs
+        cache_dict["docs"] = load_data(
+            file_names=cache_dict["file_names"], urls=cache_dict["urls"]
+        )
+        # load agent from index
+        agent, _ = construct_agent(
+            cache_dict["system_prompt"],
+            cache_dict["rag_params"],
+            cache_dict["docs"],
+            vector_index=vector_index,
+            # TODO: figure out tools
+        )
+        cache_dict["vector_index"] = vector_index
+        cache_dict["agent"] = agent
+
+        # print(cache_dict["docs"])
+        # print(cache_dict["docs"][0])
+        # print(type(cache_dict["docs"][0]))
+        # raise Exception
+        # tmp_obj = ParamCache(
+        #     system_prompt=cache_dict["system_prompt"],
+        #     file_names=cache_dict["file_names"],
+        #     urls=cache_dict["urls"],
+        #     docs=[cache_dict["docs"][0]],
+        #     rag_params=cache_dict["rag_params"],
+        #     vector_index=cache_dict["vector_index"],
+        #     agent_id=cache_dict["agent_id"],
+        #     agent=cache_dict["agent"],
+        # )
+        # raise Exception
+        # tmp_dict = {k: type(v) for k, v in cache_dict.items()}
+        # print(cache_dict.keys())
+        # print(tmp_dict)
         return cls(**cache_dict)
 
 
-def load_caches_from_directory(dir: str) -> Dict[str, ParamCache]:
-    """Load caches from directory."""
-    if not Path(dir).exists():
-        return {}
-    files = [f for f in Path(dir).iterdir() if f.is_file() and ".json" in f.suffix]
-    caches = [ParamCache.load_from_file(f) for f in files]
-    # map agent_id to cache
-    # if any caches have None as agent_id, raise error
-    if any([c.agent_id is None for c in caches]):
-        raise ValueError("Some caches do not have an agent_id.")
-    cache_dict = {c.agent_id: c for c in caches}
-    return cache_dict
+# def load_caches_from_directory(dir: str) -> Dict[str, ParamCache]:
+#     """Load caches from directory."""
+#     if not Path(dir).exists():
+#         return {}
+#     files = [f for f in Path(dir).iterdir() if f.is_file() and ".json" in f.suffix]
+#     caches = [ParamCache.load_from_file(f) for f in files]
+#     # map agent_id to cache
+#     # if any caches have None as agent_id, raise error
+#     if any([c.agent_id is None for c in caches]):
+#         raise ValueError("Some caches do not have an agent_id.")
+#     cache_dict = {c.agent_id: c for c in caches}
+#     return cache_dict
+
+
+def add_agent_id_to_directory(dir: str, agent_id: str) -> None:
+    """Save agent id to directory."""
+    full_path = Path(dir) / "agent_ids.json"
+    if not full_path.exists():
+        with open(full_path, "w") as f:
+            json.dump({"agent_ids": [agent_id]}, f)
+    else:
+        with open(full_path, "r") as f:
+            agent_ids = json.load(f)["agent_ids"]
+        if agent_id in agent_ids:
+            raise ValueError(f"Agent id {agent_id} already exists.")
+        agent_ids_set = set(agent_ids)
+        agent_ids_set.add(agent_id)
+        with open(full_path, "w") as f:
+            json.dump({"agent_ids": list(agent_ids_set)}, f)
+
+
+def load_agent_ids_from_directory(dir: str) -> List[str]:
+    """Load agent ids file."""
+    full_path = Path(dir) / "agent_ids.json"
+    if not full_path.exists():
+        return []
+    with open(full_path, "r") as f:
+        agent_ids = json.load(f)["agent_ids"]
+
+    return agent_ids
+
+
+def load_cache_from_directory(
+    dir: str,
+    agent_id: str,
+) -> ParamCache:
+    """Load cache from directory."""
+    full_path = Path(dir) / f"{agent_id}"
+    if not full_path.exists():
+        raise ValueError(f"Cache for agent {agent_id} does not exist.")
+    cache = ParamCache.load_from_disk(full_path)
+    return cache
 
 
 class RAGAgentBuilder:
@@ -227,9 +399,12 @@ class RAGAgentBuilder:
     Must pass in a cache. This cache will be modified as the agent is built.
     
     """
-    def __init__(self, cache: Optional[ParamCache] = None) -> None:
+    def __init__(
+        self, cache: Optional[ParamCache] = None, cache_dir: Optional[str] = None
+    ) -> None:
         """Init params."""
         self._cache = cache or ParamCache()
+        self._cache_dir = cache_dir or AGENT_CACHE_DIR
 
     @property
     def cache(self) -> ParamCache:
@@ -262,21 +437,9 @@ class RAGAgentBuilder:
                 Defaults to None.
         
         """
-        if file_names is None and urls is None:
-            raise ValueError("Must specify either file_names or urls.")
-        elif file_names is not None and urls is not None:
-            raise ValueError("Must specify only one of file_names or urls.")
-        elif file_names is not None:
-            reader = SimpleDirectoryReader(input_files=file_names)
-            docs = reader.load_data()
-        elif urls is not None:
-            from llama_hub.web.simple_web.base import SimpleWebPageReader
-            # use simple web page reader from llamahub
-            loader = SimpleWebPageReader()
-            docs = loader.load_data(urls=urls)
-        else:
-            raise ValueError("Must specify either file_names or urls.")
-        
+        file_names = file_names or []
+        urls = urls or []
+        docs = load_data(file_names=file_names, urls=urls)
         self._cache.docs = docs
         self._cache.file_names = file_names
         self._cache.urls = urls
@@ -334,67 +497,25 @@ class RAGAgentBuilder:
         functions should have already been called to set up the agent.
         
         """
+        agent, extra_info = construct_agent(
+            self._cache.system_prompt,
+            cast(RAGParams, self._cache.rag_params),
+            self._cache.docs,
+            additional_tools=self._cache.tools,
+        )
+
+
         # if agent_id not specified, randomly generate one
-        agent_id = agent_id or f"Agent {uuid.uuid4()}"
+        agent_id = agent_id or f"Agent_{uuid.uuid4()}"
+        self._cache.vector_index = extra_info["vector_index"]
         self._cache.agent_id = agent_id
-
-        rag_params = cast(RAGParams, self._cache.rag_params)
-        docs = self._cache.docs
-
-        # first resolve llm and embedding model
-        embed_model = resolve_embed_model(rag_params.embed_model)
-        # llm = resolve_llm(rag_params.llm)
-        # TODO: use OpenAI for now
-        # llm = OpenAI(model=rag_params.llm)
-        llm = _resolve_llm(rag_params.llm)
-
-        # first let's index the data with the right parameters
-        service_context = ServiceContext.from_defaults(
-            chunk_size=rag_params.chunk_size,
-            llm=llm,
-            embed_model=embed_model,
-        )
-        vector_index = VectorStoreIndex.from_documents(docs, service_context=service_context)
-        vector_query_engine = vector_index.as_query_engine(similarity_top_k=rag_params.top_k)
-        all_tools = []
-        vector_tool = QueryEngineTool(
-            query_engine=vector_query_engine,
-            metadata=ToolMetadata(
-                name="vector_tool",
-                description=("Use this tool to answer any user question over any data."),
-            ),
-        )
-        all_tools.append(vector_tool)
-        if rag_params.include_summarization:
-            summary_index = SummaryIndex.from_documents(docs, service_context=service_context)
-            summary_query_engine = summary_index.as_query_engine()
-            summary_tool = QueryEngineTool(
-                query_engine=summary_query_engine,
-                metadata=ToolMetadata(
-                    name="summary_tool",
-                    description=("Use this tool for any user questions that ask for a summarization of content"),
-                ),
-            )
-            all_tools.append(summary_tool)
-        
-        
-        # then we add tools
-        all_tools.extend(self._cache.tools)
-
-        # build agent
-        if self._cache.system_prompt is None:
-            return "System prompt not set yet. Please set system prompt first."
-
-        agent = load_agent(
-            all_tools, llm=llm, system_prompt=self._cache.system_prompt, verbose=True,
-            extra_kwargs={"vector_index": vector_index, "rag_params": rag_params}
-        )
-
         self._cache.agent = agent
 
         # save the cache to disk
-        agent_cache_path = f"{AGENT_CACHE_DIR}/{agent_id}.json"
+        agent_cache_path = f"{self._cache_dir}/{agent_id}"
         self._cache.save_to_disk(agent_cache_path)
+        # save to agent ids
+        add_agent_id_to_directory(self._cache_dir, agent_id)
 
         return "Agent created successfully."
 
