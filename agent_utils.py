@@ -30,6 +30,7 @@ from pathlib import Path
 import json
 import uuid
 from constants import AGENT_CACHE_DIR
+import shutil
 
 
 def _resolve_llm(llm: str) -> LLM:
@@ -253,7 +254,10 @@ class ParamCache(BaseModel):
 
     # agent params
     vector_index: Optional[VectorStoreIndex] = Field(default=None, description="Vector index for RAG agent.")
-    agent_id: Optional[str] = Field(default=None, description="Agent ID for RAG agent.")
+    agent_id: str = Field(
+        default_factory=lambda: f"Agent_{str(uuid.uuid4())}", 
+        description="Agent ID for RAG agent."
+    )
     agent: Optional[OpenAIAgent] = Field(default=None, description="RAG agent.")
 
     def save_to_disk(self, save_dir: str) -> None:
@@ -312,39 +316,7 @@ class ParamCache(BaseModel):
         cache_dict["vector_index"] = vector_index
         cache_dict["agent"] = agent
 
-        # print(cache_dict["docs"])
-        # print(cache_dict["docs"][0])
-        # print(type(cache_dict["docs"][0]))
-        # raise Exception
-        # tmp_obj = ParamCache(
-        #     system_prompt=cache_dict["system_prompt"],
-        #     file_names=cache_dict["file_names"],
-        #     urls=cache_dict["urls"],
-        #     docs=[cache_dict["docs"][0]],
-        #     rag_params=cache_dict["rag_params"],
-        #     vector_index=cache_dict["vector_index"],
-        #     agent_id=cache_dict["agent_id"],
-        #     agent=cache_dict["agent"],
-        # )
-        # raise Exception
-        # tmp_dict = {k: type(v) for k, v in cache_dict.items()}
-        # print(cache_dict.keys())
-        # print(tmp_dict)
         return cls(**cache_dict)
-
-
-# def load_caches_from_directory(dir: str) -> Dict[str, ParamCache]:
-#     """Load caches from directory."""
-#     if not Path(dir).exists():
-#         return {}
-#     files = [f for f in Path(dir).iterdir() if f.is_file() and ".json" in f.suffix]
-#     caches = [ParamCache.load_from_file(f) for f in files]
-#     # map agent_id to cache
-#     # if any caches have None as agent_id, raise error
-#     if any([c.agent_id is None for c in caches]):
-#         raise ValueError("Some caches do not have an agent_id.")
-#     cache_dict = {c.agent_id: c for c in caches}
-#     return cache_dict
 
 
 def add_agent_id_to_directory(dir: str, agent_id: str) -> None:
@@ -385,6 +357,26 @@ def load_cache_from_directory(
         raise ValueError(f"Cache for agent {agent_id} does not exist.")
     cache = ParamCache.load_from_disk(full_path)
     return cache
+
+
+def remove_agent_from_directory(
+    dir: str,
+    agent_id: str,
+) -> None:
+    """Remove agent from directory."""
+
+    # modify / resave agent_ids
+    agent_ids = load_agent_ids_from_directory(dir)
+    new_agent_ids = [id for id in agent_ids if id != agent_id]
+    full_path = Path(dir) / "agent_ids.json"
+    with open(full_path, "w") as f:
+        json.dump({"agent_ids": new_agent_ids}, f)
+
+    # remove agent cache
+    full_path = Path(dir) / f"{agent_id}"
+    if full_path.exists():
+        # recursive delete
+        shutil.rmtree(full_path)
 
 
 class RAGAgentBuilder:
@@ -506,7 +498,7 @@ class RAGAgentBuilder:
 
 
         # if agent_id not specified, randomly generate one
-        agent_id = agent_id or f"Agent_{uuid.uuid4()}"
+        agent_id = agent_id or self._cache.agent_id or f"Agent_{str(uuid.uuid4())}"
         self._cache.vector_index = extra_info["vector_index"]
         self._cache.agent_id = agent_id
         self._cache.agent = agent
@@ -548,11 +540,11 @@ have available (e.g. "Do you want to set the number of documents to retrieve?")
 
 
 # define agent
-@st.cache_resource
-def load_meta_agent_and_tools() -> Tuple[OpenAIAgent, RAGAgentBuilder]:
+# @st.cache_resource
+def load_meta_agent_and_tools(cache: Optional[ParamCache] = None) -> Tuple[OpenAIAgent, RAGAgentBuilder]:
 
     # think of this as tools for the agent to use
-    agent_builder = RAGAgentBuilder()
+    agent_builder = RAGAgentBuilder(cache)
 
     fns = [
         agent_builder.create_system_prompt, 
