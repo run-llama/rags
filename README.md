@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ```
 
 By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
-Please `.streamlit/secrets.toml` in the home folder.
+Add `.streamlit/secrets.toml` in the home folder.
 
 Then put the following:
 ```
