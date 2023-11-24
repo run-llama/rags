@@ -1,31 +1,63 @@
-from llama_index.llms import OpenAI, ChatMessage, Anthropic, Replicate
-from llama_index.llms.base import LLM
-from llama_index.llms.utils import resolve_llm
-from pydantic import BaseModel, Field
-import os
-from llama_index.tools.query_engine import QueryEngineTool
-from llama_index.agent import OpenAIAgent, ReActAgent
-from llama_index.agent.react.prompts import REACT_CHAT_SYSTEM_HEADER
-from llama_index import (
-    VectorStoreIndex,
-    SummaryIndex,
-    ServiceContext,
-    Document
-)
-from llama_index.prompts import ChatPromptTemplate
-from typing import List, cast, Optional
-from llama_index import SimpleDirectoryReader
-from llama_index.embeddings.utils import resolve_embed_model
-from llama_index.tools import QueryEngineTool, ToolMetadata, FunctionTool
-from llama_index.agent.types import BaseAgent
-from llama_index.agent.react.formatter import ReActChatFormatter
-from llama_index.llms.openai_utils import is_function_calling_model
-from builder_config import BUILDER_LLM
-from typing import Dict, Tuple, Any
-import streamlit as st
-from pathlib import Path
+import asyncio
 import json
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, cast
 
+import streamlit as st
+from llama_index import (Document, ServiceContext, SimpleDirectoryReader,
+                         SummaryIndex, VectorStoreIndex)
+from llama_index.agent import OpenAIAgent, ReActAgent
+from llama_index.agent.react.formatter import ReActChatFormatter
+from llama_index.agent.react.prompts import REACT_CHAT_SYSTEM_HEADER
+from llama_index.agent.types import BaseAgent
+from llama_index.embeddings.utils import resolve_embed_model
+from llama_index.llms import Anthropic, ChatMessage, OpenAI, Replicate
+from llama_index.llms.base import LLM
+from llama_index.llms.openai_utils import is_function_calling_model
+from llama_index.llms.utils import resolve_llm
+from llama_index.prompts import ChatPromptTemplate
+from llama_index.tools import FunctionTool, QueryEngineTool, ToolMetadata
+from llama_index.tools.query_engine import QueryEngineTool
+from pydantic import BaseModel, Field
+
+from builder_config import BUILDER_LLM
+
+
+def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
+    """
+    Creates or gets an asyncio event loop.
+    """
+    try:
+        loop = asyncio.get_event_loop_policy().get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+async def generate_response(builder_agent: BaseAgent, prompt: str) -> str:
+    """
+    Streams a generated response for the given prompt using the provided builder_agent.
+    
+    This function also updates a Streamlit container (Deltagenerator) with the ongoing response.
+    The final response string is returned.
+
+    Args:
+        builder_agent (BaseAgent): The agent used to generate the response.
+        prompt (str): The prompt for generating the response.
+
+    Returns:
+        str: The final response string.
+    """
+    response_container = st.empty()  # Container for the response that's overwritten with each token
+    response = ""
+    stream_response = builder_agent.stream_chat(prompt)  # Stream responses to the frontend
+    for token in stream_response.response_gen:
+        response += token or ""
+        response_container.markdown(response)
+    return response
 
 def _resolve_llm(llm: str) -> LLM:
     """Resolve LLM."""
@@ -204,6 +236,7 @@ class RAGAgentBuilder:
             file_paths = file_names
         elif urls is not None:
             from llama_hub.web.simple_web.base import SimpleWebPageReader
+
             # use simple web page reader from llamahub
             loader = SimpleWebPageReader()
             docs = loader.load_data(urls=urls)
