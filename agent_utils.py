@@ -30,28 +30,29 @@ import json
 
 def _resolve_llm(llm: str) -> LLM:
     """Resolve LLM."""
-    # TODO: make this less hardcoded with if-else statements
+    # Done: make this less hardcoded with if-else statements
     # see if there's a prefix
     # - if there isn't, assume it's an OpenAI model
     # - if there is, resolve it
     tokens = llm.split(":")
     if len(tokens) == 1:
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=llm)
-    elif tokens[0] == "local":
-        llm = resolve_llm(llm)
-    elif tokens[0] == "openai":
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=tokens[1])
-    elif tokens[0] == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
-        llm = Anthropic(model=tokens[1])
-    elif tokens[0] == "replicate":
-        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
-        llm = Replicate(model=tokens[1])
+        return OpenAI(model=llm)
     else:
-        raise ValueError(f"LLM {llm} not recognized.")
-    return llm
+        match tokens[0]:
+            case "local":
+                return resolve_llm(llm)
+            case "openai":
+                os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+                return OpenAI(model=tokens[1])
+            case "anthropic":
+                os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
+                return Anthropic(model=tokens[1])
+            case "replicate":
+                os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
+                return Replicate(model=tokens[1])
+            case _:
+                raise ValueError(f"LLM {llm} not recognized.")
 
 
 ####################
