@@ -1,20 +1,15 @@
 """Streamlit page showing builder config."""
 import streamlit as st
-import openai
-from streamlit_pills import pills
-from typing import cast
+from typing import cast, Optional
 
 from agent_utils import (
     RAGParams,
     RAGAgentBuilder,
     ParamCache,
-    remove_agent_from_directory
+    remove_agent_from_directory,
 )
 from st_utils import update_selected_agent_with_id
-from llama_index.agent.types import BaseAgent
-from constants import (
-    AGENT_CACHE_DIR
-)
+from constants import AGENT_CACHE_DIR
 from st_utils import add_sidebar
 
 
@@ -23,39 +18,50 @@ from st_utils import add_sidebar
 ####################
 
 
-def update_agent():
+def update_agent(agent_builder: RAGAgentBuilder) -> None:
     """Update agent."""
     ### Update the agent
     agent_builder.update_agent(
-        agent_id_st,
-        system_prompt=sys_prompt_st,
-        include_summarization=include_summarization_st,
-        top_k=top_k_st,
-        chunk_size=chunk_size_st,
-        embed_model=embed_model_st,
-        llm=llm_st
+        st.session_state.agent_id_st,
+        system_prompt=st.session_state.sys_prompt_st,
+        include_summarization=st.session_state.include_summarization_st,
+        top_k=st.session_state.top_k_st,
+        chunk_size=st.session_state.chunk_size_st,
+        embed_model=st.session_state.embed_model_st,
+        llm=st.session_state.llm_st,
     )
 
     # Update Radio Buttons: update selected agent to the new id
     update_selected_agent_with_id(agent_builder.cache.agent_id)
+    st.rerun()
 
 
-def delete_agent():
+def delete_agent(agent_builder: RAGAgentBuilder) -> None:
     """Delete agent."""
     ### Delete agent
     # remove saved agent from directory
-    remove_agent_from_directory(AGENT_CACHE_DIR, agent_builder.cache.agent_id)
+    remove_agent_from_directory(str(AGENT_CACHE_DIR), agent_builder.cache.agent_id)
+    st.rerun()
 
 
-st.set_page_config(page_title="RAG Pipeline Config", page_icon="🦙", layout="centered", initial_sidebar_state="auto", menu_items=None)
+st.set_page_config(
+    page_title="RAG Pipeline Config",
+    page_icon="🦙",
+    layout="centered",
+    initial_sidebar_state="auto",
+    menu_items=None,
+)
 st.title("RAG Pipeline Config")
 add_sidebar()
 
 # first, pick the cache: this is preloaded from an existing agent, or is part of the current one being
 # created
-if "selected_cache" in st.session_state.keys() and st.session_state.selected_cache is not None:
+if (
+    "selected_cache" in st.session_state.keys()
+    and st.session_state.selected_cache is not None
+):
     cache = cast(ParamCache, st.session_state.selected_cache)
-    agent_builder = RAGAgentBuilder(cache)
+    agent_builder: Optional[RAGAgentBuilder] = RAGAgentBuilder(cache)
 elif "agent_builder" in st.session_state.keys():
     agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
 else:
@@ -63,10 +69,7 @@ else:
 
 if agent_builder is not None:
 
-    st.info(
-        f"Viewing config for agent: {agent_builder.cache.agent_id}", icon="ℹ️"
-    )
-
+    st.info(f"Viewing config for agent: {agent_builder.cache.agent_id}", icon="ℹ️")
 
     agent_id_st = st.text_input("Agent ID", value=agent_builder.cache.agent_id)
 
@@ -78,23 +81,31 @@ if agent_builder is not None:
 
     rag_params = cast(RAGParams, agent_builder.cache.rag_params)
     file_names = st.text_input(
-        "File names (not editable)", 
+        "File names (not editable)",
         value=",".join(agent_builder.cache.file_names),
-        disabled=True
+        disabled=True,
     )
     urls = st.text_input(
-        "URLs (not editable)",
-        value=",".join(agent_builder.cache.urls),
-        disabled=True
+        "URLs (not editable)", value=",".join(agent_builder.cache.urls), disabled=True
     )
-    include_summarization_st = st.checkbox("Include Summarization (only works for GPT-4)", value=rag_params.include_summarization)
-    top_k_st = st.number_input("Top K", value=rag_params.top_k)
-    chunk_size_st = st.number_input("Chunk Size", value=rag_params.chunk_size)
-    embed_model_st = st.text_input("Embed Model", value=rag_params.embed_model)
-    llm_st = st.text_input("LLM", value=rag_params.llm)
+    include_summarization_st = st.checkbox(
+        "Include Summarization (only works for GPT-4)",
+        value=rag_params.include_summarization,
+        key="include_summarization_st",
+    )
+    top_k_st = st.number_input("Top K", value=rag_params.top_k, key="top_k_st")
+    chunk_size_st = st.number_input(
+        "Chunk Size", value=rag_params.chunk_size, key="chunk_size_st"
+    )
+    embed_model_st = st.text_input(
+        "Embed Model", value=rag_params.embed_model, key="embed_model_st"
+    )
+    llm_st = st.text_input("LLM", value=rag_params.llm, key="llm_st")
     if agent_builder.cache.agent is not None:
-        st.button("Update Agent", on_click=update_agent)
-        st.button(":red[Delete Agent]", on_click=delete_agent)
+        if st.button("Update Agent"):
+            update_agent(agent_builder)
+        if st.button(":red[Delete Agent]"):
+            delete_agent(agent_builder)
     else:
         # show text saying "agent not created"
         st.info("Agent not created. Please create an agent in the above section.")

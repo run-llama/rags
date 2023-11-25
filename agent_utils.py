@@ -3,7 +3,6 @@ from llama_index.llms.base import LLM
 from llama_index.llms.utils import resolve_llm
 from pydantic import BaseModel, Field
 import os
-from llama_index.tools.query_engine import QueryEngineTool
 from llama_index.agent import OpenAIAgent, ReActAgent
 from llama_index.agent.react.prompts import REACT_CHAT_SYSTEM_HEADER
 from llama_index import (
@@ -12,7 +11,7 @@ from llama_index import (
     ServiceContext,
     StorageContext,
     Document,
-    load_index_from_storage
+    load_index_from_storage,
 )
 from llama_index.prompts import ChatPromptTemplate
 from typing import List, cast, Optional
@@ -20,11 +19,12 @@ from llama_index import SimpleDirectoryReader
 from llama_index.embeddings.utils import resolve_embed_model
 from llama_index.tools import QueryEngineTool, ToolMetadata, FunctionTool
 from llama_index.agent.types import BaseAgent
+from llama_index.chat_engine.types import BaseChatEngine
 from llama_index.agent.react.formatter import ReActChatFormatter
 from llama_index.llms.openai_utils import is_function_calling_model
 from llama_index.chat_engine import CondensePlusContextChatEngine
 from builder_config import BUILDER_LLM
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Callable
 import streamlit as st
 from pathlib import Path
 import json
@@ -33,18 +33,18 @@ from constants import AGENT_CACHE_DIR
 import shutil
 
 
-def _resolve_llm(llm: str) -> LLM:
+def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""
     # TODO: make this less hardcoded with if-else statements
     # see if there's a prefix
     # - if there isn't, assume it's an OpenAI model
     # - if there is, resolve it
-    tokens = llm.split(":")
+    tokens = llm_str.split(":")
     if len(tokens) == 1:
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=llm)
+        llm: LLM = OpenAI(model=llm_str)
     elif tokens[0] == "local":
-        llm = resolve_llm(llm)
+        llm = resolve_llm(llm_str)
     elif tokens[0] == "openai":
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
         llm = OpenAI(model=tokens[1])
@@ -55,7 +55,7 @@ def _resolve_llm(llm: str) -> LLM:
         os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
         llm = Replicate(model=tokens[1])
     else:
-        raise ValueError(f"LLM {llm} not recognized.")
+        raise ValueError(f"LLM {llm_str} not recognized.")
     return llm
 
 
@@ -94,20 +94,27 @@ class RAGParams(BaseModel):
     """RAG parameters.
 
     Parameters used to configure a RAG pipeline.
-    
+
     """
-    include_summarization: bool = Field(default=False, description="Whether to include summarization in the RAG pipeline. (only for GPT-4)")
-    top_k: int = Field(default=2, description="Number of documents to retrieve from vector store.")
+
+    include_summarization: bool = Field(
+        default=False,
+        description="Whether to include summarization in the RAG pipeline. (only for GPT-4)",
+    )
+    top_k: int = Field(
+        default=2, description="Number of documents to retrieve from vector store."
+    )
     chunk_size: int = Field(default=1024, description="Chunk size for vector store.")
     embed_model: str = Field(
         default="default", description="Embedding model to use (default is OpenAI)"
     )
-    llm: str = Field(default="gpt-4-1106-preview", description="LLM to use for summarization.")
+    llm: str = Field(
+        default="gpt-4-1106-preview", description="LLM to use for summarization."
+    )
 
 
 def load_data(
-    file_names: Optional[List[str]] = None,
-    urls: Optional[List[str]] = None
+    file_names: Optional[List[str]] = None, urls: Optional[List[str]] = None
 ) -> List[Document]:
     """Load data."""
     file_names = file_names or []
@@ -121,6 +128,7 @@ def load_data(
         docs = reader.load_data()
     elif urls:
         from llama_hub.web.simple_web.base import SimpleWebPageReader
+
         # use simple web page reader from llamahub
         loader = SimpleWebPageReader()
         docs = loader.load_data(urls=urls)
@@ -131,32 +139,64 @@ def load_data(
 
 
 def load_agent(
-    tools: List, 
-    llm: LLM, 
+    tools: List,
+    llm: LLM,
     system_prompt: str,
     extra_kwargs: Optional[Dict] = None,
-    **kwargs: Any
-) -> BaseAgent:
+    **kwargs: Any,
+) -> BaseChatEngine:
     """Load agent."""
     extra_kwargs = extra_kwargs or {}
     if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
         # get OpenAI Agent
-        agent = OpenAIAgent.from_tools(
-            tools=tools,
-            llm=llm,
-            system_prompt=system_prompt,
-            **kwargs
+        agent: BaseChatEngine = OpenAIAgent.from_tools(
+            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs
         )
     else:
         if "vector_index" not in extra_kwargs:
-            raise ValueError("Must pass in vector index for CondensePlusContextChatEngine.")
+            raise ValueError(
+                "Must pass in vector index for CondensePlusContextChatEngine."
+            )
         vector_index = cast(VectorStoreIndex, extra_kwargs["vector_index"])
         rag_params = cast(RAGParams, extra_kwargs["rag_params"])
         # use condense + context chat engine
         agent = CondensePlusContextChatEngine.from_defaults(
             vector_index.as_retriever(similarity_top_k=rag_params.top_k),
         )
-        
+
+    return agent
+
+
+def load_meta_agent(
+    tools: List,
+    llm: LLM,
+    system_prompt: str,
+    extra_kwargs: Optional[Dict] = None,
+    **kwargs: Any,
+) -> BaseAgent:
+    """Load meta agent.
+
+    TODO: consolidate with load_agent.
+
+    The meta-agent *has* to perform tool-use.
+
+    """
+    extra_kwargs = extra_kwargs or {}
+    if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
+        # get OpenAI Agent
+        agent: BaseAgent = OpenAIAgent.from_tools(
+            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs
+        )
+    else:
+        agent = ReActAgent.from_tools(
+            tools=tools,
+            llm=llm,
+            react_chat_formatter=ReActChatFormatter(
+                system_header=system_prompt + "\n" + REACT_CHAT_SYSTEM_HEADER,
+            ),
+            **kwargs,
+        )
+
     return agent
 
 
@@ -166,7 +206,7 @@ def construct_agent(
     docs: List[Document],
     vector_index: Optional[VectorStoreIndex] = None,
     additional_tools: Optional[List] = None,
-) -> Tuple[BaseAgent, Dict]:
+) -> Tuple[BaseChatEngine, Dict]:
     """Construct agent from docs / parameters / indices."""
     extra_info = {}
     additional_tools = additional_tools or []
@@ -186,13 +226,17 @@ def construct_agent(
     )
 
     if vector_index is None:
-        vector_index = VectorStoreIndex.from_documents(docs, service_context=service_context)
+        vector_index = VectorStoreIndex.from_documents(
+            docs, service_context=service_context
+        )
     else:
         pass
-        
+
     extra_info["vector_index"] = vector_index
 
-    vector_query_engine = vector_index.as_query_engine(similarity_top_k=rag_params.top_k)
+    vector_query_engine = vector_index.as_query_engine(
+        similarity_top_k=rag_params.top_k
+    )
     all_tools = []
     vector_tool = QueryEngineTool(
         query_engine=vector_query_engine,
@@ -203,18 +247,21 @@ def construct_agent(
     )
     all_tools.append(vector_tool)
     if rag_params.include_summarization:
-        summary_index = SummaryIndex.from_documents(docs, service_context=service_context)
+        summary_index = SummaryIndex.from_documents(
+            docs, service_context=service_context
+        )
         summary_query_engine = summary_index.as_query_engine()
         summary_tool = QueryEngineTool(
             query_engine=summary_query_engine,
             metadata=ToolMetadata(
                 name="summary_tool",
-                description=("Use this tool for any user questions that ask for a summarization of content"),
+                description=(
+                    "Use this tool for any user questions that ask for a summarization of content"
+                ),
             ),
         )
         all_tools.append(summary_tool)
-    
-    
+
     # then we add tools
     all_tools.extend(additional_tools)
 
@@ -223,8 +270,11 @@ def construct_agent(
         return "System prompt not set yet. Please set system prompt first."
 
     agent = load_agent(
-        all_tools, llm=llm, system_prompt=system_prompt, verbose=True,
-        extra_kwargs={"vector_index": vector_index, "rag_params": rag_params}
+        all_tools,
+        llm=llm,
+        system_prompt=system_prompt,
+        verbose=True,
+        extra_kwargs={"vector_index": vector_index, "rag_params": rag_params},
     )
     return agent, extra_info
 
@@ -234,7 +284,7 @@ class ParamCache(BaseModel):
 
     Created a wrapper class around a dict in case we wanted to more explicitly
     type different items in the cache.
-    
+
     """
 
     # arbitrary types
@@ -242,23 +292,35 @@ class ParamCache(BaseModel):
         arbitrary_types_allowed = True
 
     # system prompt
-    system_prompt: Optional[str] = Field(default=None, description="System prompt for RAG agent.")
+    system_prompt: Optional[str] = Field(
+        default=None, description="System prompt for RAG agent."
+    )
     # data
-    file_names: List[str] = Field(default_factory=list, description="File names as data source (if specified)")
-    urls: List[str] = Field(default_factory=list, description="URLs as data source (if specified)")
+    file_names: List[str] = Field(
+        default_factory=list, description="File names as data source (if specified)"
+    )
+    urls: List[str] = Field(
+        default_factory=list, description="URLs as data source (if specified)"
+    )
     docs: List = Field(default_factory=list, description="Documents for RAG agent.")
     # tools
-    tools: List = Field(default_factory=list, description="Additional tools for RAG agent (e.g. web)")
+    tools: List = Field(
+        default_factory=list, description="Additional tools for RAG agent (e.g. web)"
+    )
     # RAG params
-    rag_params: RAGParams = Field(default_factory=RAGParams, description="RAG parameters for RAG agent.")
+    rag_params: RAGParams = Field(
+        default_factory=RAGParams, description="RAG parameters for RAG agent."
+    )
 
     # agent params
-    vector_index: Optional[VectorStoreIndex] = Field(default=None, description="Vector index for RAG agent.")
-    agent_id: str = Field(
-        default_factory=lambda: f"Agent_{str(uuid.uuid4())}", 
-        description="Agent ID for RAG agent."
+    vector_index: Optional[VectorStoreIndex] = Field(
+        default=None, description="Vector index for RAG agent."
     )
-    agent: Optional[OpenAIAgent] = Field(default=None, description="RAG agent.")
+    agent_id: str = Field(
+        default_factory=lambda: f"Agent_{str(uuid.uuid4())}",
+        description="Agent ID for RAG agent.",
+    )
+    agent: Optional[BaseChatEngine] = Field(default=None, description="RAG agent.")
 
     def save_to_disk(self, save_dir: str) -> None:
         """Save cache to disk."""
@@ -291,8 +353,10 @@ class ParamCache(BaseModel):
         save_dir: str,
     ) -> "ParamCache":
         """Load cache from disk."""
-        storage_context = StorageContext.from_defaults(persist_dir=Path(save_dir) / "storage")
-        vector_index = load_index_from_storage(storage_context)
+        storage_context = StorageContext.from_defaults(
+            persist_dir=str(Path(save_dir) / "storage")
+        )
+        vector_index = cast(VectorStoreIndex, load_index_from_storage(storage_context))
 
         with open(Path(save_dir) / "cache.json", "r") as f:
             cache_dict = json.load(f)
@@ -355,7 +419,7 @@ def load_cache_from_directory(
     full_path = Path(dir) / f"{agent_id}"
     if not full_path.exists():
         raise ValueError(f"Cache for agent {agent_id} does not exist.")
-    cache = ParamCache.load_from_disk(full_path)
+    cache = ParamCache.load_from_disk(str(full_path))
     return cache
 
 
@@ -389,8 +453,9 @@ class RAGAgentBuilder:
     - setting parameters (e.g. top-k)
 
     Must pass in a cache. This cache will be modified as the agent is built.
-    
+
     """
+
     def __init__(
         self, cache: Optional[ParamCache] = None, cache_dir: Optional[str] = None
     ) -> None:
@@ -412,11 +477,8 @@ class RAGAgentBuilder:
 
         return f"System prompt created: {response.message.content}"
 
-
     def load_data(
-        self,
-        file_names: Optional[List[str]] = None,
-        urls: Optional[List[str]] = None
+        self, file_names: Optional[List[str]] = None, urls: Optional[List[str]] = None
     ) -> str:
         """Load data for a given task.
 
@@ -427,7 +489,7 @@ class RAGAgentBuilder:
                 Defaults to None.
             urls (Optional[List[str]]): List of urls to load.
                 Defaults to None.
-        
+
         """
         file_names = file_names or []
         urls = urls or []
@@ -437,9 +499,8 @@ class RAGAgentBuilder:
         self._cache.urls = urls
         return "Data loaded successfully."
 
-
     # NOTE: unused
-    def add_web_tool(self) -> None:
+    def add_web_tool(self) -> str:
         """Add a web tool to enable agent to solve a task."""
         # TODO: make this not hardcoded to a web tool
         # Set up Metaphor tool
@@ -459,21 +520,20 @@ class RAGAgentBuilder:
 
         Should be called before `set_rag_params` so that the agent is aware of the
         schema.
-        
+
         """
         rag_params = self._cache.rag_params
         return rag_params.dict()
 
-
-    def set_rag_params(self, **rag_params: Dict):
+    def set_rag_params(self, **rag_params: Dict) -> str:
         """Set RAG parameters.
 
         These parameters will then be used to actually initialize the agent.
         Should call `get_rag_params` first to get the schema of the input dictionary.
 
         Args:
-            **rag_params (Dict): dictionary of RAG parameters. 
-        
+            **rag_params (Dict): dictionary of RAG parameters.
+
         """
         new_dict = self._cache.rag_params.dict()
         new_dict.update(rag_params)
@@ -481,21 +541,22 @@ class RAGAgentBuilder:
         self._cache.rag_params = rag_params_obj
         return "RAG parameters set successfully."
 
-
-    def create_agent(self, agent_id: Optional[str] = None) -> None:
+    def create_agent(self, agent_id: Optional[str] = None) -> str:
         """Create an agent.
 
         There are no parameters for this function because all the
         functions should have already been called to set up the agent.
-        
+
         """
+        if self._cache.system_prompt is None:
+            raise ValueError("Must set system prompt before creating agent.")
+
         agent, extra_info = construct_agent(
-            self._cache.system_prompt,
+            cast(str, self._cache.system_prompt),
             cast(RAGParams, self._cache.rag_params),
             self._cache.docs,
             additional_tools=self._cache.tools,
         )
-
 
         # if agent_id not specified, randomly generate one
         agent_id = agent_id or self._cache.agent_id or f"Agent_{str(uuid.uuid4())}"
@@ -507,10 +568,9 @@ class RAGAgentBuilder:
         agent_cache_path = f"{self._cache_dir}/{agent_id}"
         self._cache.save_to_disk(agent_cache_path)
         # save to agent ids
-        add_agent_id_to_directory(self._cache_dir, agent_id)
+        add_agent_id_to_directory(str(self._cache_dir), agent_id)
 
         return "Agent created successfully."
-
 
     def update_agent(
         self,
@@ -523,15 +583,15 @@ class RAGAgentBuilder:
         llm: Optional[str] = None,
     ) -> None:
         """Update agent.
-        
+
         Delete old agent by ID and create a new one.
         Optionally update the system prompt and RAG parameters.
 
         NOTE: Currently is manually called, not meant for agent use.
-        
+
         """
         # remove saved agent from directory, since we'll be re-saving
-        remove_agent_from_directory(AGENT_CACHE_DIR, self.cache.agent_id)
+        remove_agent_from_directory(str(AGENT_CACHE_DIR), self.cache.agent_id)
 
         # set agent id
         self.cache.agent_id = agent_id
@@ -544,7 +604,7 @@ class RAGAgentBuilder:
         # update the cache
         # TODO: decouple functions from tool functions exposed to the agent
 
-        rag_params_dict = {}
+        rag_params_dict: Dict[str, Any] = {}
         if include_summarization is not None:
             rag_params_dict["include_summarization"] = include_summarization
         if top_k is not None:
@@ -591,24 +651,25 @@ have available (e.g. "Do you want to set the number of documents to retrieve?")
 
 # define agent
 # @st.cache_resource
-def load_meta_agent_and_tools(cache: Optional[ParamCache] = None) -> Tuple[OpenAIAgent, RAGAgentBuilder]:
+def load_meta_agent_and_tools(
+    cache: Optional[ParamCache] = None,
+) -> Tuple[BaseAgent, RAGAgentBuilder]:
 
     # think of this as tools for the agent to use
     agent_builder = RAGAgentBuilder(cache)
 
-    fns = [
-        agent_builder.create_system_prompt, 
-        agent_builder.load_data, 
+    fns: List[Callable] = [
+        agent_builder.create_system_prompt,
+        agent_builder.load_data,
         # add_web_tool,
         agent_builder.get_rag_params,
         agent_builder.set_rag_params,
-        agent_builder.create_agent
+        agent_builder.create_agent,
     ]
     fn_tools = [FunctionTool.from_defaults(fn=fn) for fn in fns]
 
-    builder_agent = load_agent(
+    builder_agent = load_meta_agent(
         fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True
     )
 
     return builder_agent, agent_builder
-    
