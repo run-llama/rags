@@ -39,6 +39,11 @@ else:
     builder_agent, agent_builder = load_meta_agent_and_tools()
 
 
+st.info(
+    f"Currently building/editing agent: {agent_builder.cache.agent_id}", icon="ℹ️"
+)
+
+
 if "builder_agent" not in st.session_state.keys():
     st.session_state.builder_agent = builder_agent
 if "agent_builder" not in st.session_state.keys():
