@@ -68,14 +68,17 @@ def _resolve_llm(llm_str: str) -> LLM:
 GEN_SYS_PROMPT_STR = """\
 Task information is given below. 
 
-Given the task, please generate a system prompt for an OpenAI-powered bot to solve this task: 
+Given the task, please generate a system prompt for an OpenAI-powered bot \
+to solve this task: 
 {task} \
 
 Make sure the system prompt obeys the following requirements:
-- Tells the bot to ALWAYS use tools given to solve the task. NEVER give an answer without using a tool.
-- Does not reference a specific data source. The data source is implicit in any queries to the bot,
-    and telling the bot to analyze a specific data source might confuse it given a 
-    user query.
+- Tells the bot to ALWAYS use tools given to solve the task. \
+NEVER give an answer without using a tool.
+- Does not reference a specific data source. \
+The data source is implicit in any queries to the bot, \
+and telling the bot to analyze a specific data source might confuse it given a \
+user query.
 
 """
 
@@ -99,7 +102,9 @@ class RAGParams(BaseModel):
 
     include_summarization: bool = Field(
         default=False,
-        description="Whether to include summarization in the RAG pipeline. (only for GPT-4)",
+        description=(
+            "Whether to include summarization in the RAG pipeline. (only for GPT-4)"
+        ),
     )
     top_k: int = Field(
         default=2, description="Number of documents to retrieve from vector store."
@@ -256,7 +261,8 @@ def construct_agent(
             metadata=ToolMetadata(
                 name="summary_tool",
                 description=(
-                    "Use this tool for any user questions that ask for a summarization of content"
+                    "Use this tool for any user questions that ask "
+                    "for a summarization of content"
                 ),
             ),
         )

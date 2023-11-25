@@ -26,7 +26,8 @@ st.set_page_config(
 st.title("Build a RAGs bot, powered by LlamaIndex 💬🦙")
 st.info(
     "Use this page to build your RAG bot over your data! "
-    "Once the agent is finished creating, check out the `RAG Config` and `Generated RAG Agent` pages.\n"
+    "Once the agent is finished creating, check out the `RAG Config` and "
+    "`Generated RAG Agent` pages.\n"
     "To build a new agent, please make sure that 'Create a new agent' is selected.",
     icon="ℹ️",
 )

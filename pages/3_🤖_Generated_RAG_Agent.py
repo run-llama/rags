@@ -34,8 +34,8 @@ def add_to_message_history(role: str, content: str) -> None:
     st.session_state.agent_messages.append(message)  # Add response to message history
 
 
-# first, pick the cache: this is preloaded from an existing agent, or is part of the current one being
-# created
+# first, pick the cache: this is preloaded from an existing agent,
+# or is part of the current one being created
 agent = None
 if (
     "selected_cache" in st.session_state.keys()
