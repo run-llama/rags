@@ -23,6 +23,29 @@ from st_utils import add_sidebar
 ####################
 
 
+def update_agent():
+    """Update agent."""
+    ### Update the agent
+    agent_builder.update_agent(
+        agent_id_st,
+        system_prompt=sys_prompt_st,
+        include_summarization=include_summarization_st,
+        top_k=top_k_st,
+        chunk_size=chunk_size_st,
+        embed_model=embed_model_st,
+        llm=llm_st
+    )
+
+    # Update Radio Buttons: update selected agent to the new id
+    update_selected_agent_with_id(agent_builder.cache.agent_id)
+
+
+def delete_agent():
+    """Delete agent."""
+    ### Delete agent
+    # remove saved agent from directory
+    remove_agent_from_directory(AGENT_CACHE_DIR, agent_builder.cache.agent_id)
+
 
 st.set_page_config(page_title="RAG Pipeline Config", page_icon="🦙", layout="centered", initial_sidebar_state="auto", menu_items=None)
 st.title("RAG Pipeline Config")
@@ -70,36 +93,8 @@ if agent_builder is not None:
     embed_model_st = st.text_input("Embed Model", value=rag_params.embed_model)
     llm_st = st.text_input("LLM", value=rag_params.llm)
     if agent_builder.cache.agent is not None:
-        if st.button("Update Agent"):
-            ### Update the agent
-
-            # remove saved agent from directory, since we'll be re-saving
-            remove_agent_from_directory(AGENT_CACHE_DIR, agent_builder.cache.agent_id)
-
-            # set agent id
-            agent_builder.cache.agent_id = agent_id_st
-
-            # set system prompt
-            agent_builder.cache.system_prompt = sys_prompt_st
-            # get agent_builder
-            # We call set_rag_params and create_agent, which will
-            # update the cache
-            # TODO: decouple functions from tool functions exposed to the agent
-            agent_builder.set_rag_params(
-                include_summarization=include_summarization_st,
-                top_k=top_k_st,
-                chunk_size=chunk_size_st,
-                embed_model=embed_model_st,
-                llm=llm_st,
-            )
-            # this will update the agent in the cache
-            agent_builder.create_agent()
-
-            # update selected agent to the new id
-            update_selected_agent_with_id(agent_builder.cache.agent_id)
-
-            # trigger refresh
-            st.rerun()
+        st.button("Update Agent", on_click=update_agent)
+        st.button(":red[Delete Agent]", on_click=delete_agent)
     else:
         # show text saying "agent not created"
         st.info("Agent not created. Please create an agent in the above section.")

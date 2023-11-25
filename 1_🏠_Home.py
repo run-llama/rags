@@ -21,7 +21,8 @@ st.set_page_config(page_title="Build a RAGs bot, powered by LlamaIndex", page_ic
 st.title("Build a RAGs bot, powered by LlamaIndex 💬🦙")
 st.info(
     "Use this page to build your RAG bot over your data! "
-    "Once the agent is finished creating, check out the `RAG Config` and `Generated RAG Agent` pages.", 
+    "Once the agent is finished creating, check out the `RAG Config` and `Generated RAG Agent` pages.\n"
+    "To build a new agent, please make sure that 'Create a new agent' is selected.",
     icon="ℹ️"
 )
 
@@ -96,4 +97,4 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 st.rerun()
 
 else:
-    st.info("To build a new agent, please make sure that 'Create a new agent' is selected.")
+    pass

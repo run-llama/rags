@@ -512,6 +512,55 @@ class RAGAgentBuilder:
         return "Agent created successfully."
 
 
+    def update_agent(
+        self,
+        agent_id: str,
+        system_prompt: Optional[str] = None,
+        include_summarization: Optional[bool] = None,
+        top_k: Optional[int] = None,
+        chunk_size: Optional[int] = None,
+        embed_model: Optional[str] = None,
+        llm: Optional[str] = None,
+    ) -> None:
+        """Update agent.
+        
+        Delete old agent by ID and create a new one.
+        Optionally update the system prompt and RAG parameters.
+
+        NOTE: Currently is manually called, not meant for agent use.
+        
+        """
+        # remove saved agent from directory, since we'll be re-saving
+        remove_agent_from_directory(AGENT_CACHE_DIR, self.cache.agent_id)
+
+        # set agent id
+        self.cache.agent_id = agent_id
+
+        # set system prompt
+        if system_prompt is not None:
+            self.cache.system_prompt = system_prompt
+        # get agent_builder
+        # We call set_rag_params and create_agent, which will
+        # update the cache
+        # TODO: decouple functions from tool functions exposed to the agent
+
+        rag_params_dict = {}
+        if include_summarization is not None:
+            rag_params_dict["include_summarization"] = include_summarization
+        if top_k is not None:
+            rag_params_dict["top_k"] = top_k
+        if chunk_size is not None:
+            rag_params_dict["chunk_size"] = chunk_size
+        if embed_model is not None:
+            rag_params_dict["embed_model"] = embed_model
+        if llm is not None:
+            rag_params_dict["llm"] = llm
+
+        self.set_rag_params(**rag_params_dict)
+        # this will update the agent in the cache
+        self.create_agent()
+
+
 ####################
 #### META Agent ####
 ####################
@@ -524,6 +573,7 @@ You should generally use the tools in this rough order to build the agent.
 2) Load in user-specified data (based on file paths they specify).
 3) Decide whether or not to add additional tools.
 4) Set parameters for the RAG pipeline.
+5) Build the agent
 
 This will be a back and forth conversation with the user. You should
 continue asking users if there's anything else they want to do until
