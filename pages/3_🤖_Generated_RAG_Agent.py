@@ -4,8 +4,7 @@ from typing import Optional, cast
 
 import streamlit as st
 
-from agent_utils import (ParamCache, RAGAgentBuilder, generate_response,
-                         get_or_create_event_loop)
+from agent_utils import ParamCache, RAGAgentBuilder, generate_response
 from st_utils import add_sidebar, get_or_create_event_loop
 
 ####################

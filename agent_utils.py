@@ -30,19 +30,6 @@ from builder_config import BUILDER_LLM
 from constants import AGENT_CACHE_DIR
 
 
-def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
-    """
-    Creates or gets an asyncio event loop.
-    """
-    try:
-        loop = asyncio.get_event_loop_policy().get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
-
 async def generate_response(builder_agent: BaseAgent, prompt: str) -> str:
     """
     Streams a generated response for the given prompt using the provided builder_agent.
