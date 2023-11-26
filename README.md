@@ -11,10 +11,10 @@ This project is inspired by [GPTs](https://openai.com/blog/introducing-gpts), la
 
 ## Installation and Setup 
 
-Clone this project, go into the `rags` project folder.
+Clone this project, go into the `rags` project folder. We recommend creating a virtual env for dependencies (`python3 -m venv .venv`).
 
 ```
-pip install -r requirements.txt
+poetry install --with dev
 ```
 
 By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
