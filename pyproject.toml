@@ -1,0 +1,65 @@
+[tool.poetry]
+name = "rags"
+version = "0.0.2"
+description = "Build RAG with natural language."
+authors = ["Jerry Liu"]
+# New attributes
+license = "MIT"
+readme = "README.md"
+homepage = "https://docs.llamaindex.ai/en/latest/"
+repository = "https://github.com/run-llama/rags"
+keywords = ["llama-index", "rags"]
+include = [
+    "LICENSE",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8.1,<3.12,!=3.9.7"
+streamlit = "1.28.0"
+streamlit-pills = "0.3.0"
+llama-index = "0.9.7"
+llama-hub = "0.0.44"
+# NOTE: this is due to a trivial dependency in the web tool, will refactor
+langchain = "0.0.305"
+pypdf = "3.17.1"
+
+[tool.poetry.dev-dependencies]
+# pytest = "7.2.1"
+# pytest-dotenv = "0.5.2"
+# pytest_httpserver = "1.0.8"
+# pytest-mock = "3.11.1"
+typing-inspect = "0.8.0"
+typing_extensions = "^4.5.0"
+types-requests = "2.28.11.8"
+black = "22.12.0"
+isort = "5.11.4"
+pytest-asyncio = "^0.21.1"
+ruff = "0.0.285"
+mypy = "0.991"
+
+[build-system]
+requires = ["poetry>=0.12", "poetry-core>=1.0.0"]
+build-backend = "poetry.masonry.api"
+
+[tool.mypy]
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["notebooks", "build", "examples"]
+
+[tool.ruff]
+# Allow lines to be as long as 80 characters.
+# TODO: it should be removed, but we need to fix the entire code first.
+line-length = 88
+exclude = [
+    ".venv",
+    "__pycache__",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".ruff_cache",
+    "examples",
+    "notebooks",
+    ".git"
+]
+
+[tool.ruff.per-file-ignores]
+"base.py" = ["E402", "F811", "E501"]
