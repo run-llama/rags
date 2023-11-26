@@ -32,17 +32,13 @@ import uuid
 from constants import AGENT_CACHE_DIR
 import shutil
 
-
 def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""
-    # TODO: make this less hardcoded with if-else statements
-    # see if there's a prefix
-    # - if there isn't, assume it's an OpenAI model
-    # - if there is, resolve it
+    llm = None  # Initialize llm
     tokens = llm_str.split(":")
     if len(tokens) == 1:
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm: LLM = OpenAI(model=llm_str)
+        llm = OpenAI(model=llm_str)
     elif tokens[0] == "local":
         llm = resolve_llm(llm_str)
     elif tokens[0] == "openai":
