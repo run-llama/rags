@@ -34,11 +34,14 @@ import shutil
 
 def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""
-    llm = None  # Initialize llm
+    # TODO: make this less hardcoded with if-else statements
+    # see if there's a prefix
+    # - if there isn't, assume it's an OpenAI model
+    # - if there is, resolve it
     tokens = llm_str.split(":")
     if len(tokens) == 1:
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=llm_str)
+        llm: LLM = OpenAI(model=llm_str)
     elif tokens[0] == "local":
         llm = resolve_llm(llm_str)
     elif tokens[0] == "openai":
