@@ -33,20 +33,38 @@ from constants import AGENT_CACHE_DIR
 import shutil
 
 
-def _resolve_llm(llm_str: str) -> LLM:
+
+class BaseLLM:
+    pass
+
+class LLM(BaseLLM):
+    pass
+
+class OpenAI(BaseLLM):
+    pass
+
+class Anthropic(BaseLLM):
+    pass
+
+class Replicate(BaseLLM):
+    pass
+
+def _resolve_llm(llm_str: str) -> BaseLLM:
     """Resolve LLM."""
-    llm: Optional[LLM] = None  # Initialize llm
+    llm: Optional[BaseLLM] = None  # Initialize llm
     llm_mapping = {"local": resolve_llm, "openai": OpenAI, "anthropic": Anthropic, "replicate": Replicate}
-    tokens = llm.split(":")     
+    tokens = llm_str.split(":")     
     if len(tokens) == 1:        
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key         
-        llm = OpenAI(model=llm)     
+        llm = OpenAI(model=llm_str)     
     elif tokens[0] in llm_mapping:         
         os.environ[f"{tokens[0].upper()}_API_KEY"] = st.secrets.get(f"{tokens[0]}_key")         
         llm = llm_mapping[tokens[0]](model=tokens[1])     
     else:         
-        raise ValueError(f"LLM {llm} not recognized.")     
+        raise ValueError(f"LLM {llm_str} not recognized.")     
     return llm 
+
+
 ####################
 #### META TOOLS ####
 ####################
