@@ -1,15 +1,20 @@
-import asyncio
 import json
 import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import streamlit as st
-from llama_index import (Document, ServiceContext, SimpleDirectoryReader,
-                         StorageContext, SummaryIndex, VectorStoreIndex,
-                         load_index_from_storage)
+from llama_index import (
+    Document,
+    ServiceContext,
+    SimpleDirectoryReader,
+    StorageContext,
+    SummaryIndex,
+    VectorStoreIndex,
+    load_index_from_storage,
+)
 from llama_index.agent import OpenAIAgent, ReActAgent
 from llama_index.agent.react.formatter import ReActChatFormatter
 from llama_index.agent.react.prompts import REACT_CHAT_SYSTEM_HEADER
@@ -23,34 +28,41 @@ from llama_index.llms.openai_utils import is_function_calling_model
 from llama_index.llms.utils import resolve_llm
 from llama_index.prompts import ChatPromptTemplate
 from llama_index.tools import FunctionTool, QueryEngineTool, ToolMetadata
-from llama_index.tools.query_engine import QueryEngineTool
 from pydantic import BaseModel, Field
 
 from builder_config import BUILDER_LLM
 from constants import AGENT_CACHE_DIR
 
 
-async def generate_response(builder_agent: BaseAgent, prompt: str) -> str:
+async def generate_response(
+    builder_agent: Union[BaseAgent, BaseChatEngine], prompt: str
+) -> str:
     """
     Streams a generated response for the given prompt using the provided builder_agent.
-    
-    This function also updates a Streamlit container (Deltagenerator) with the ongoing response.
-    The final response string is returned.
+
+    This function also updates a Streamlit container (Deltagenerator) with the ongoing
+    response. The final response string is returned.
 
     Args:
-        builder_agent (BaseAgent): The agent used to generate the response.
+        builder_agent (Union[BaseAgent, BaseChatEngine]): The agent used to generate
+        the response.
         prompt (str): The prompt for generating the response.
 
     Returns:
         str: The final response string.
     """
-    response_container = st.empty()  # Container for the response that's overwritten with each token
+    response_container = (
+        st.empty()
+    )  # Container for the response that's overwritten with each token
     response = ""
-    stream_response = builder_agent.stream_chat(prompt)  # Stream responses to the frontend
+    stream_response = builder_agent.stream_chat(
+        prompt
+    )  # Stream responses to the frontend
     for token in stream_response.response_gen:
         response += token or ""
         response_container.markdown(response)
     return response
+
 
 def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""

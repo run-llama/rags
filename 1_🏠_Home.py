@@ -3,8 +3,11 @@ import asyncio
 import streamlit as st
 from streamlit_pills import pills
 
-from agent_utils import (generate_response, load_agent_ids_from_directory,
-                         load_meta_agent_and_tools)
+from agent_utils import (
+    generate_response,
+    load_agent_ids_from_directory,
+    load_meta_agent_and_tools,
+)
 from constants import AGENT_CACHE_DIR
 from st_utils import add_sidebar, get_or_create_event_loop
 
@@ -93,7 +96,9 @@ if prompt := st.chat_input(
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = asyncio.run(generate_response(st.session_state.builder_agent, prompt))
+            response = asyncio.run(
+                generate_response(st.session_state.builder_agent, str(prompt))
+            )
             add_to_message_history("assistant", str(response))
 
             # check agent_ids again, if it doesn't match, add to directory and refresh

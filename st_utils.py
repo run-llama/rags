@@ -4,8 +4,7 @@ from typing import Optional
 
 import streamlit as st
 
-from agent_utils import (load_agent_ids_from_directory,
-                         load_cache_from_directory)
+from agent_utils import load_agent_ids_from_directory, load_cache_from_directory
 from constants import AGENT_CACHE_DIR
 
 
@@ -54,6 +53,7 @@ def add_sidebar() -> None:
             on_change=update_selected_agent,
             key="agent_selector",
         )
+
 
 def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
     """
