@@ -74,7 +74,7 @@ if cache is not None and cache.agent is not None:
     if st.session_state.agent_messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                response = asyncio.run(generate_response(agent, prompt))
+                response = asyncio.run(generate_response(agent, str(prompt)))
                 add_to_message_history("assistant", str(response))
 else:
     st.info("Agent not created. Please create an agent in the above section.")
