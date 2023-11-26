@@ -33,30 +33,36 @@ from constants import AGENT_CACHE_DIR
 import shutil
 
 
-def _resolve_llm(llm_str: str) -> LLM:
+
+class BaseLLM:
+    pass
+
+class LLM(BaseLLM):
+    pass
+
+class OpenAI(BaseLLM):
+    pass
+
+class Anthropic(BaseLLM):
+    pass
+
+class Replicate(BaseLLM):
+    pass
+
+def _resolve_llm(llm_str: str) -> BaseLLM:
     """Resolve LLM."""
-    # TODO: make this less hardcoded with if-else statements
-    # see if there's a prefix
-    # - if there isn't, assume it's an OpenAI model
-    # - if there is, resolve it
-    tokens = llm_str.split(":")
-    if len(tokens) == 1:
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm: LLM = OpenAI(model=llm_str)
-    elif tokens[0] == "local":
-        llm = resolve_llm(llm_str)
-    elif tokens[0] == "openai":
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=tokens[1])
-    elif tokens[0] == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
-        llm = Anthropic(model=tokens[1])
-    elif tokens[0] == "replicate":
-        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
-        llm = Replicate(model=tokens[1])
-    else:
-        raise ValueError(f"LLM {llm_str} not recognized.")
-    return llm
+    llm: Optional[BaseLLM] = None  # Initialize llm
+    llm_mapping = {"local": resolve_llm, "openai": OpenAI, "anthropic": Anthropic, "replicate": Replicate}
+    tokens = llm_str.split(":")     
+    if len(tokens) == 1:        
+        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key         
+        llm = OpenAI(model=llm_str)     
+    elif tokens[0] in llm_mapping:         
+        os.environ[f"{tokens[0].upper()}_API_KEY"] = st.secrets.get(f"{tokens[0]}_key")         
+        llm = llm_mapping[tokens[0]](model=tokens[1])     
+    else:         
+        raise ValueError(f"LLM {llm_str} not recognized.")     
+    return llm 
 
 
 ####################
