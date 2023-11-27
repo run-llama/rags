@@ -1,5 +1,4 @@
 """Streamlit utils."""
-import asyncio
 from typing import Optional
 
 import streamlit as st
@@ -53,20 +52,3 @@ def add_sidebar() -> None:
             on_change=update_selected_agent,
             key="agent_selector",
         )
-
-
-def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
-    """
-    Creates or gets an asyncio event loop.
-
-    Streamlit runs in a separate thread that doesn't have an event loop by default.
-    So we create an event loop and run the async function (generate_response) inside it
-    """
-    try:
-        loop = asyncio.get_event_loop_policy().get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop

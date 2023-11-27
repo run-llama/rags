@@ -1,5 +1,6 @@
 import asyncio
 
+import nest_asyncio
 import streamlit as st
 from streamlit_pills import pills
 
@@ -9,7 +10,9 @@ from agent_utils import (
     load_meta_agent_and_tools,
 )
 from constants import AGENT_CACHE_DIR
-from st_utils import add_sidebar, get_or_create_event_loop
+from st_utils import add_sidebar
+
+nest_asyncio.apply()
 
 ####################
 #### STREAMLIT #####
@@ -33,8 +36,6 @@ st.info(
 )
 
 add_sidebar()
-
-get_or_create_event_loop()
 
 
 if (

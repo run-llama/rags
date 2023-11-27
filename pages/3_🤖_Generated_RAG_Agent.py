@@ -2,10 +2,13 @@
 import asyncio
 from typing import Optional, cast
 
+import nest_asyncio
 import streamlit as st
 
 from agent_utils import ParamCache, RAGAgentBuilder, generate_response
-from st_utils import add_sidebar, get_or_create_event_loop
+from st_utils import add_sidebar
+
+nest_asyncio.apply()
 
 ####################
 #### STREAMLIT #####
@@ -23,7 +26,6 @@ st.title("Generated RAG Agent")
 
 add_sidebar()
 
-get_or_create_event_loop()
 
 if (
     "agent_messages" not in st.session_state.keys()
