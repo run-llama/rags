@@ -34,6 +34,27 @@ streamlit run 1_🏠_Home.py
 
 ```
 
+## Installation and Setup using Docker
+
+Alternatively, you can use Docker.
+
+Clone this project, go into the `rags` project folder.
+
+By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
+Add `.streamlit/secrets.toml` in the home folder.
+
+Then put the following:
+```
+openai_key = "<openai_key>"
+```
+
+Build & Run.
+
+```
+docker compose build
+docker compose up
+```
+
 ## Detailed Overview
 
 The app contains the following sections, corresponding to the steps listed above.

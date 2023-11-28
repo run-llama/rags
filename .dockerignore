@@ -1,0 +1,13 @@
+.ipynb_checkpoints
+.streamlit
+.venv
+__pycache__
+cache
+.git
+.gitignore
+.github
+README.md
+docker-compose.yml
+Dockerfile
+tests
+data

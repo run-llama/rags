@@ -2,3 +2,6 @@
 .streamlit
 .venv
 __pycache__
+cache
+data/*
+!data/pg_essay.txt
