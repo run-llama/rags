@@ -32,6 +32,9 @@ import uuid
 from constants import AGENT_CACHE_DIR
 import shutil
 
+from llama_index.callbacks import CallbackManager
+from callback_manager import StreamlitFunctionsCallbackHandler
+
 
 def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""
@@ -153,9 +156,22 @@ def load_agent(
     """Load agent."""
     extra_kwargs = extra_kwargs or {}
     if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
+        # TODO: use default msg handler
+        # TODO: separate this from agent_utils.py...
+        def _msg_handler(msg: str) -> None:
+            """Message handler."""
+            st.info(msg)
+            st.session_state.agent_messages.append(
+                {"role": "assistant", "content": msg}
+            )
+
+        # add streamlit callbacks (to inject events)
+        handler = StreamlitFunctionsCallbackHandler(_msg_handler)
+        callback_manager = CallbackManager([handler])
         # get OpenAI Agent
         agent: BaseChatEngine = OpenAIAgent.from_tools(
-            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs
+            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs,
+            callback_manager=callback_manager,
         )
     else:
         if "vector_index" not in extra_kwargs:
@@ -189,8 +205,9 @@ def load_meta_agent(
     extra_kwargs = extra_kwargs or {}
     if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
         # get OpenAI Agent
+        
         agent: BaseAgent = OpenAIAgent.from_tools(
-            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs
+            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs,
         )
     else:
         agent = ReActAgent.from_tools(
