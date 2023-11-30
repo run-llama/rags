@@ -24,6 +24,7 @@ def update_agent() -> None:
         "config_agent_builder" in st.session_state.keys()
         and st.session_state.config_agent_builder is not None
     ):
+        additional_tools = st.session_state.additional_tools_st.split(",")
         agent_builder = cast(RAGAgentBuilder, st.session_state.config_agent_builder)
         ### Update the agent
         agent_builder.update_agent(
@@ -34,6 +35,7 @@ def update_agent() -> None:
             chunk_size=st.session_state.chunk_size_st,
             embed_model=st.session_state.embed_model_st,
             llm=st.session_state.llm_st,
+            additional_tools=additional_tools,
         )
 
         # Update Radio Buttons: update selected agent to the new id
@@ -114,6 +116,14 @@ if agent_builder is not None:
         value=rag_params.include_summarization,
         key="include_summarization_st",
     )
+
+    # add web tool
+    additional_tools_st = st.text_input(
+        "Additional tools (currently only supports 'web_search')",
+        value=",".join(agent_builder.cache.tools),
+        key="additional_tools_st",
+    )
+
     top_k_st = st.number_input("Top K", value=rag_params.top_k, key="top_k_st")
     chunk_size_st = st.number_input(
         "Chunk Size", value=rag_params.chunk_size, key="chunk_size_st"

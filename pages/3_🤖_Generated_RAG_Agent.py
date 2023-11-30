@@ -34,6 +34,19 @@ def add_to_message_history(role: str, content: str) -> None:
     st.session_state.agent_messages.append(message)  # Add response to message history
 
 
+def display_messages() -> None:
+    """Display messages."""
+    for message in st.session_state.agent_messages:  # Display the prior chat messages
+        with st.chat_message(message["role"]):
+            msg_type = message["msg_type"] if "msg_type" in message.keys() else "text"
+            if msg_type == "text":
+                st.write(message["content"])
+            elif msg_type == "info":
+                st.info(message["content"], icon="ℹ️")
+            else:
+                raise ValueError(f"Unknown message type: {msg_type}")
+
+
 # first, pick the cache: this is preloaded from an existing agent,
 # or is part of the current one being created
 agent = None
@@ -53,9 +66,9 @@ else:
 if cache is not None and cache.agent is not None:
     st.info(f"Viewing config for agent: {cache.agent_id}", icon="ℹ️")
     agent = cache.agent
-    for message in st.session_state.agent_messages:  # Display the prior chat messages
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+
+    # display prior messages
+    display_messages()
 
     # don't process selected for now
     if prompt := st.chat_input(
