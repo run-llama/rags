@@ -285,6 +285,65 @@ def construct_agent(
     return agent, extra_info
 
 
+def get_web_agent_tool() -> QueryEngineTool:
+    """Get web agent tool.
+
+    Wrap with our load and search tool spec.
+
+    """
+    from llama_hub.tools.metaphor.base import MetaphorToolSpec
+
+    # TODO: set metaphor API key
+    metaphor_tool = MetaphorToolSpec(
+        api_key=st.secrets.metaphor_key,
+    )
+    metaphor_tool_list = metaphor_tool.to_tool_list()
+
+    # TODO: LoadAndSearch doesn't work yet
+    # The search_and_retrieve_documents tool is the third in the tool list,
+    # as seen above
+    # wrapped_retrieve = LoadAndSearchToolSpec.from_defaults(
+    #     metaphor_tool_list[2],
+    # )
+
+    # NOTE: requires openai right now
+    # We don't give the Agent our unwrapped retrieve document tools
+    # instead passing the wrapped tools
+    web_agent = OpenAIAgent.from_tools(
+        # [*wrapped_retrieve.to_tool_list(), metaphor_tool_list[4]],
+        metaphor_tool_list,
+        verbose=True,
+    )
+
+    # return agent as a tool
+    # TODO: tune description
+    web_agent_tool = QueryEngineTool.from_defaults(
+        web_agent,
+        name="web_agent",
+        description="""
+            This agent can answer questions by searching the web. \
+Use this tool if the answer is ONLY likely to be found by searching \
+the internet, especially for queries about recent events.
+        """,
+    )
+
+    return web_agent_tool
+
+
+def get_tool_objects(tool_names: List[str]) -> List:
+    """Get tool objects from tool names."""
+    # construct additional tools
+    tool_objs = []
+    for tool_name in tool_names:
+        if tool_name == "web_search":
+            # build web agent
+            tool_objs.append(get_web_agent_tool())
+        else:
+            raise ValueError(f"Tool {tool_name} not recognized.")
+
+    return tool_objs
+
+
 class ParamCache(BaseModel):
     """Cache for RAG agent builder.
 
@@ -338,7 +397,7 @@ class ParamCache(BaseModel):
             "file_names": self.file_names,
             "urls": self.urls,
             # TODO: figure out tools
-            # "tools": [],
+            "tools": self.tools,
             "rag_params": self.rag_params.dict(),
             "agent_id": self.agent_id,
         }
@@ -376,11 +435,13 @@ class ParamCache(BaseModel):
             file_names=cache_dict["file_names"], urls=cache_dict["urls"]
         )
         # load agent from index
+        additional_tools = get_tool_objects(cache_dict["tools"])
         agent, _ = construct_agent(
             cache_dict["system_prompt"],
             cache_dict["rag_params"],
             cache_dict["docs"],
             vector_index=vector_index,
+            additional_tools=additional_tools,
             # TODO: figure out tools
         )
         cache_dict["vector_index"] = vector_index
@@ -505,20 +566,14 @@ class RAGAgentBuilder:
         self._cache.urls = urls
         return "Data loaded successfully."
 
-    # NOTE: unused
     def add_web_tool(self) -> str:
         """Add a web tool to enable agent to solve a task."""
         # TODO: make this not hardcoded to a web tool
         # Set up Metaphor tool
-        from llama_hub.tools.metaphor.base import MetaphorToolSpec
-
-        # TODO: set metaphor API key
-        metaphor_tool = MetaphorToolSpec(
-            api_key=os.environ["METAPHOR_API_KEY"],
-        )
-        metaphor_tool_list = metaphor_tool.to_tool_list()
-
-        self._cache.tools.extend(metaphor_tool_list)
+        if "web_search" in self._cache.tools:
+            return "Web tool already added."
+        else:
+            self._cache.tools.append("web_search")
         return "Web tool added successfully."
 
     def get_rag_params(self) -> Dict:
@@ -557,11 +612,13 @@ class RAGAgentBuilder:
         if self._cache.system_prompt is None:
             raise ValueError("Must set system prompt before creating agent.")
 
+        # construct additional tools
+        additional_tools = get_tool_objects(self.cache.tools)
         agent, extra_info = construct_agent(
             cast(str, self._cache.system_prompt),
             cast(RAGParams, self._cache.rag_params),
             self._cache.docs,
-            additional_tools=self._cache.tools,
+            additional_tools=additional_tools,
         )
 
         # if agent_id not specified, randomly generate one
@@ -587,6 +644,7 @@ class RAGAgentBuilder:
         chunk_size: Optional[int] = None,
         embed_model: Optional[str] = None,
         llm: Optional[str] = None,
+        additional_tools: Optional[List] = None,
     ) -> None:
         """Update agent.
 
@@ -609,7 +667,6 @@ class RAGAgentBuilder:
         # We call set_rag_params and create_agent, which will
         # update the cache
         # TODO: decouple functions from tool functions exposed to the agent
-
         rag_params_dict: Dict[str, Any] = {}
         if include_summarization is not None:
             rag_params_dict["include_summarization"] = include_summarization
@@ -623,6 +680,11 @@ class RAGAgentBuilder:
             rag_params_dict["llm"] = llm
 
         self.set_rag_params(**rag_params_dict)
+
+        # update tools
+        if additional_tools is not None:
+            self.cache.tools = additional_tools
+
         # this will update the agent in the cache
         self.create_agent()
 
@@ -655,6 +717,33 @@ have available (e.g. "Do you want to set the number of documents to retrieve?")
 # please make sure to update the LLM above if you change the function below
 
 
+def _get_builder_agent_tools(agent_builder: RAGAgentBuilder) -> List[FunctionTool]:
+    """Get list of builder agent tools to pass to the builder agent."""
+    # see if metaphor api key is set, otherwise don't add web tool
+    # TODO: refactor this later
+
+    if "metaphor_key" in st.secrets:
+        fns: List[Callable] = [
+            agent_builder.create_system_prompt,
+            agent_builder.load_data,
+            agent_builder.add_web_tool,
+            agent_builder.get_rag_params,
+            agent_builder.set_rag_params,
+            agent_builder.create_agent,
+        ]
+    else:
+        fns = [
+            agent_builder.create_system_prompt,
+            agent_builder.load_data,
+            agent_builder.get_rag_params,
+            agent_builder.set_rag_params,
+            agent_builder.create_agent,
+        ]
+
+    fn_tools: List[FunctionTool] = [FunctionTool.from_defaults(fn=fn) for fn in fns]
+    return fn_tools
+
+
 # define agent
 # @st.cache_resource
 def load_meta_agent_and_tools(
@@ -664,15 +753,7 @@ def load_meta_agent_and_tools(
     # think of this as tools for the agent to use
     agent_builder = RAGAgentBuilder(cache)
 
-    fns: List[Callable] = [
-        agent_builder.create_system_prompt,
-        agent_builder.load_data,
-        # add_web_tool,
-        agent_builder.get_rag_params,
-        agent_builder.set_rag_params,
-        agent_builder.create_agent,
-    ]
-    fn_tools = [FunctionTool.from_defaults(fn=fn) for fn in fns]
+    fn_tools = _get_builder_agent_tools(agent_builder)
 
     builder_agent = load_meta_agent(
         fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True
