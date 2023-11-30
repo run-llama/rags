@@ -170,7 +170,10 @@ def load_agent(
         callback_manager = CallbackManager([handler])
         # get OpenAI Agent
         agent: BaseChatEngine = OpenAIAgent.from_tools(
-            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs,
+            tools=tools,
+            llm=llm,
+            system_prompt=system_prompt,
+            **kwargs,
             callback_manager=callback_manager,
         )
     else:
@@ -205,9 +208,12 @@ def load_meta_agent(
     extra_kwargs = extra_kwargs or {}
     if isinstance(llm, OpenAI) and is_function_calling_model(llm.model):
         # get OpenAI Agent
-        
+
         agent: BaseAgent = OpenAIAgent.from_tools(
-            tools=tools, llm=llm, system_prompt=system_prompt, **kwargs,
+            tools=tools,
+            llm=llm,
+            system_prompt=system_prompt,
+            **kwargs,
         )
     else:
         agent = ReActAgent.from_tools(
