@@ -46,6 +46,7 @@ def display_messages() -> None:
             else:
                 raise ValueError(f"Unknown message type: {msg_type}")
 
+
 # first, pick the cache: this is preloaded from an existing agent,
 # or is part of the current one being created
 agent = None
