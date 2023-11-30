@@ -660,7 +660,6 @@ have available (e.g. "Do you want to set the number of documents to retrieve?")
 def load_meta_agent_and_tools(
     cache: Optional[ParamCache] = None,
 ) -> Tuple[BaseAgent, RAGAgentBuilder]:
-
     # think of this as tools for the agent to use
     agent_builder = RAGAgentBuilder(cache)
 

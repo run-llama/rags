@@ -85,7 +85,6 @@ else:
 st.session_state.config_agent_builder = agent_builder
 
 if agent_builder is not None:
-
     st.info(f"Viewing config for agent: {agent_builder.cache.agent_id}", icon="ℹ️")
 
     agent_id_st = st.text_input(
