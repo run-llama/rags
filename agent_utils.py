@@ -162,7 +162,7 @@ def load_agent(
             """Message handler."""
             st.info(msg)
             st.session_state.agent_messages.append(
-                {"role": "assistant", "content": msg}
+                {"role": "assistant", "content": msg, "msg_type": "info"}
             )
 
         # add streamlit callbacks (to inject events)
