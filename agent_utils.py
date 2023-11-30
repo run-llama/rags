@@ -335,6 +335,7 @@ def get_web_agent_tool() -> QueryEngineTool:
     web_agent = OpenAIAgent.from_tools(
         # [*wrapped_retrieve.to_tool_list(), metaphor_tool_list[4]],
         metaphor_tool_list,
+        llm=BUILDER_LLM,
         verbose=True,
     )
 
