@@ -1,19 +1,10 @@
 """Agent builder."""
 
-from llama_index.llms import OpenAI, ChatMessage, Anthropic, Replicate
-from llama_index.llms.base import LLM
-from llama_index.llms.utils import resolve_llm
-from pydantic import BaseModel, Field
+from llama_index.llms import ChatMessage
 from llama_index.prompts import ChatPromptTemplate
 from typing import List, cast, Optional
-from llama_index import SimpleDirectoryReader
-from llama_index.embeddings.utils import resolve_embed_model
-from llama_index.tools import QueryEngineTool, ToolMetadata, FunctionTool
+from llama_index.tools import FunctionTool
 from llama_index.agent.types import BaseAgent
-from llama_index.chat_engine.types import BaseChatEngine
-from llama_index.agent.react.formatter import ReActChatFormatter
-from llama_index.llms.openai_utils import is_function_calling_model
-from llama_index.chat_engine import CondensePlusContextChatEngine
 from core.builder_config import BUILDER_LLM
 from typing import Dict, Tuple, Any, Callable, Union
 import streamlit as st
@@ -23,8 +14,6 @@ import uuid
 from core.constants import AGENT_CACHE_DIR
 import shutil
 
-from llama_index.callbacks import CallbackManager
-from callback_manager import StreamlitFunctionsCallbackHandler
 from core.param_cache import ParamCache, RAGParams
 from core.utils import (
     load_data,
@@ -152,7 +141,9 @@ class RAGAgentBuilder:
     ) -> None:
         """Init params."""
         self._cache = cache or ParamCache()
-        self._agent_registry = agent_registry or AgentCacheRegistry(str(AGENT_CACHE_DIR))
+        self._agent_registry = agent_registry or AgentCacheRegistry(
+            str(AGENT_CACHE_DIR)
+        )
 
     @property
     def cache(self) -> ParamCache:
