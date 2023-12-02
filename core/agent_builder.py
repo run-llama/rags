@@ -15,7 +15,7 @@ from llama_index.agent.react.formatter import ReActChatFormatter
 from llama_index.llms.openai_utils import is_function_calling_model
 from llama_index.chat_engine import CondensePlusContextChatEngine
 from core.builder_config import BUILDER_LLM
-from typing import Dict, Tuple, Any, Callable
+from typing import Dict, Tuple, Any, Callable, Union
 import streamlit as st
 from pathlib import Path
 import json
@@ -41,7 +41,7 @@ class AgentCacheRegistry:
 
     """
 
-    def __init__(self, dir: str) -> None:
+    def __init__(self, dir: Union[str, Path]) -> None:
         """Init params."""
         self._dir = dir
 
@@ -92,7 +92,7 @@ class AgentCacheRegistry:
         # modify / resave agent_ids
         agent_ids = self.get_agent_ids()
         new_agent_ids = [id for id in agent_ids if id != agent_id]
-        full_path = Path(self.self._dir) / "agent_ids.json"
+        full_path = Path(self._dir) / "agent_ids.json"
         with open(full_path, "w") as f:
             json.dump({"agent_ids": new_agent_ids}, f)
 
@@ -152,7 +152,7 @@ class RAGAgentBuilder:
     ) -> None:
         """Init params."""
         self._cache = cache or ParamCache()
-        self._agent_registry = agent_registry or AgentCacheRegistry(AGENT_CACHE_DIR)
+        self._agent_registry = agent_registry or AgentCacheRegistry(str(AGENT_CACHE_DIR))
 
     @property
     def cache(self) -> ParamCache:

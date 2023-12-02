@@ -1,7 +1,5 @@
 """Streamlit utils."""
 from core.agent_builder import (
-    load_agent_ids_from_directory,
-    load_cache_from_directory,
     load_meta_agent_and_tools,
     AgentCacheRegistry,
     RAGAgentBuilder,
@@ -85,7 +83,7 @@ def get_current_state() -> CurrentSessionState:
 
     """
     # get agent registry
-    agent_registry = AgentCacheRegistry(AGENT_CACHE_DIR)
+    agent_registry = AgentCacheRegistry(str(AGENT_CACHE_DIR))
     if "agent_registry" not in st.session_state.keys():
         st.session_state.agent_registry = agent_registry
 
