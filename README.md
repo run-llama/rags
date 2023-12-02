@@ -83,7 +83,7 @@ It will be able to pick the right RAG tools (either top-k vector search or optio
 
 ### Builder Agent
 
-By default the builder agent uses OpenAI. This is defined in the `builder_config.py` file.
+By default the builder agent uses OpenAI. This is defined in the `core/builder_config.py` file.
 
 You can customize this to whatever LLM you want (an example is provided for Anthropic).
 

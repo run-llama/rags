@@ -2,10 +2,12 @@
 import streamlit as st
 from typing import cast, Optional
 
-from agent_utils import (
+from core.param_cache import (
     RAGParams,
-    RAGAgentBuilder,
     ParamCache,
+)
+from core.agent_builder import (
+    RAGAgentBuilder,
     remove_agent_from_directory,
 )
 from st_utils import update_selected_agent_with_id

@@ -1,7 +1,8 @@
 """Streamlit page showing builder config."""
 import streamlit as st
-from typing import cast, Optional
-from agent_utils import RAGAgentBuilder, ParamCache
+from typing import cast, Optional 
+from core.agent_builder import RAGAgentBuilder
+from core.param_cache import ParamCache
 from st_utils import add_sidebar
 
 

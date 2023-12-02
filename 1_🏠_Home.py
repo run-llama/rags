@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_pills import pills
 
-from agent_utils import (
+from core.agent_builder import (
     load_meta_agent_and_tools,
     load_agent_ids_from_directory,
 )
