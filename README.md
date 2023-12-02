@@ -1,5 +1,11 @@
 # RAGs
 
+
+
+https://github.com/run-llama/rags/assets/4858925/a6204550-b3d1-4cde-b308-8d944e5d3058
+
+
+
 RAGs is a Streamlit app that lets you create a RAG pipeline from a data source using natural language.
 
 You get to do the following:
