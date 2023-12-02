@@ -103,7 +103,7 @@ You can set the configuration either through natural language or manually for bo
 
 ## Resources
 
-Running into issues? Please file a GitHub issue or join our [Discord](https://discord.gg/dGcwcsnxhU).
+Running into issues? Please file a GitHub issue or join our [Discord](https://discord.gg/dGcwcsnxhU). Want to contribute? Learn how by reading [CONTRIBUTING.md](https://github.com/run-llama/rags/blob/main/CONTRIBUTING.md).
 
 This app was built with [LlamaIndex Python](https://github.com/run-llama/llama_index).
 

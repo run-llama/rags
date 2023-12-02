@@ -773,7 +773,6 @@ def _get_builder_agent_tools(agent_builder: RAGAgentBuilder) -> List[FunctionToo
 def load_meta_agent_and_tools(
     cache: Optional[ParamCache] = None,
 ) -> Tuple[BaseAgent, RAGAgentBuilder]:
-
     # think of this as tools for the agent to use
     agent_builder = RAGAgentBuilder(cache)
 
