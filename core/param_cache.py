@@ -33,40 +33,10 @@ import json
 import uuid
 from core.constants import AGENT_CACHE_DIR
 import shutil
-from core.utils import (
-    load_data,
-    get_tool_objects,
-    construct_agent
-    
-)
+from core.utils import load_data, get_tool_objects, construct_agent, RAGParams
 
 from llama_index.callbacks import CallbackManager
 from callback_manager import StreamlitFunctionsCallbackHandler
-
-
-class RAGParams(BaseModel):
-    """RAG parameters.
-
-    Parameters used to configure a RAG pipeline.
-
-    """
-
-    include_summarization: bool = Field(
-        default=False,
-        description=(
-            "Whether to include summarization in the RAG pipeline. (only for GPT-4)"
-        ),
-    )
-    top_k: int = Field(
-        default=2, description="Number of documents to retrieve from vector store."
-    )
-    chunk_size: int = Field(default=1024, description="Chunk size for vector store.")
-    embed_model: str = Field(
-        default="default", description="Embedding model to use (default is OpenAI)"
-    )
-    llm: str = Field(
-        default="gpt-4-1106-preview", description="LLM to use for summarization."
-    )
 
 
 class ParamCache(BaseModel):

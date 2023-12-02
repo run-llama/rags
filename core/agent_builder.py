@@ -27,69 +27,80 @@ from llama_index.callbacks import CallbackManager
 from callback_manager import StreamlitFunctionsCallbackHandler
 from core.param_cache import ParamCache, RAGParams
 from core.utils import (
-    load_agent, load_data, get_tool_objects, construct_agent, load_meta_agent
+    load_data,
+    get_tool_objects,
+    construct_agent,
+    load_meta_agent,
 )
 
 
-def add_agent_id_to_directory(dir: str, agent_id: str) -> None:
-    """Save agent id to directory."""
-    full_path = Path(dir) / "agent_ids.json"
-    if not full_path.exists():
-        with open(full_path, "w") as f:
-            json.dump({"agent_ids": [agent_id]}, f)
-    else:
+class AgentCacheRegistry:
+    """Registry for agent caches, in disk.
+
+    Can register new agent caches, load agent caches, delete agent caches, etc.
+
+    """
+
+    def __init__(self, dir: str) -> None:
+        """Init params."""
+        self._dir = dir
+
+    def _add_agent_id_to_directory(self, agent_id: str) -> None:
+        """Save agent id to directory."""
+        full_path = Path(self._dir) / "agent_ids.json"
+        if not full_path.exists():
+            with open(full_path, "w") as f:
+                json.dump({"agent_ids": [agent_id]}, f)
+        else:
+            with open(full_path, "r") as f:
+                agent_ids = json.load(f)["agent_ids"]
+            if agent_id in agent_ids:
+                raise ValueError(f"Agent id {agent_id} already exists.")
+            agent_ids_set = set(agent_ids)
+            agent_ids_set.add(agent_id)
+            with open(full_path, "w") as f:
+                json.dump({"agent_ids": list(agent_ids_set)}, f)
+
+    def add_new_agent_cache(self, agent_id: str, cache: ParamCache) -> None:
+        """Register agent."""
+        # save the cache to disk
+        agent_cache_path = f"{self._dir}/{agent_id}"
+        cache.save_to_disk(agent_cache_path)
+        # save to agent ids
+        self._add_agent_id_to_directory(agent_id)
+
+    def get_agent_ids(self) -> List[str]:
+        """Get agent ids."""
+        full_path = Path(self._dir) / "agent_ids.json"
+        if not full_path.exists():
+            return []
         with open(full_path, "r") as f:
             agent_ids = json.load(f)["agent_ids"]
-        if agent_id in agent_ids:
-            raise ValueError(f"Agent id {agent_id} already exists.")
-        agent_ids_set = set(agent_ids)
-        agent_ids_set.add(agent_id)
+
+        return agent_ids
+
+    def get_agent_cache(self, agent_id: str) -> ParamCache:
+        """Get agent cache."""
+        full_path = Path(self._dir) / f"{agent_id}"
+        if not full_path.exists():
+            raise ValueError(f"Cache for agent {agent_id} does not exist.")
+        cache = ParamCache.load_from_disk(str(full_path))
+        return cache
+
+    def delete_agent_cache(self, agent_id: str) -> None:
+        """Delete agent cache."""
+        # modify / resave agent_ids
+        agent_ids = self.get_agent_ids()
+        new_agent_ids = [id for id in agent_ids if id != agent_id]
+        full_path = Path(self.self._dir) / "agent_ids.json"
         with open(full_path, "w") as f:
-            json.dump({"agent_ids": list(agent_ids_set)}, f)
+            json.dump({"agent_ids": new_agent_ids}, f)
 
-
-def load_agent_ids_from_directory(dir: str) -> List[str]:
-    """Load agent ids file."""
-    full_path = Path(dir) / "agent_ids.json"
-    if not full_path.exists():
-        return []
-    with open(full_path, "r") as f:
-        agent_ids = json.load(f)["agent_ids"]
-
-    return agent_ids
-
-
-def load_cache_from_directory(
-    dir: str,
-    agent_id: str,
-) -> ParamCache:
-    """Load cache from directory."""
-    full_path = Path(dir) / f"{agent_id}"
-    if not full_path.exists():
-        raise ValueError(f"Cache for agent {agent_id} does not exist.")
-    cache = ParamCache.load_from_disk(str(full_path))
-    return cache
-
-
-def remove_agent_from_directory(
-    dir: str,
-    agent_id: str,
-) -> None:
-    """Remove agent from directory."""
-
-    # modify / resave agent_ids
-    agent_ids = load_agent_ids_from_directory(dir)
-    new_agent_ids = [id for id in agent_ids if id != agent_id]
-    full_path = Path(dir) / "agent_ids.json"
-    with open(full_path, "w") as f:
-        json.dump({"agent_ids": new_agent_ids}, f)
-
-    # remove agent cache
-    full_path = Path(dir) / f"{agent_id}"
-    if full_path.exists():
-        # recursive delete
-        shutil.rmtree(full_path)
-
+        # remove agent cache
+        full_path = Path(self._dir) / f"{agent_id}"
+        if full_path.exists():
+            # recursive delete
+            shutil.rmtree(full_path)
 
 
 # System prompt tool
@@ -135,16 +146,23 @@ class RAGAgentBuilder:
     """
 
     def __init__(
-        self, cache: Optional[ParamCache] = None, cache_dir: Optional[str] = None
+        self,
+        cache: Optional[ParamCache] = None,
+        agent_registry: Optional[AgentCacheRegistry] = None,
     ) -> None:
         """Init params."""
         self._cache = cache or ParamCache()
-        self._cache_dir = cache_dir or AGENT_CACHE_DIR
+        self._agent_registry = agent_registry or AgentCacheRegistry(AGENT_CACHE_DIR)
 
     @property
     def cache(self) -> ParamCache:
         """Cache."""
         return self._cache
+
+    @property
+    def agent_registry(self) -> AgentCacheRegistry:
+        """Agent registry."""
+        return self._agent_registry
 
     def create_system_prompt(self, task: str) -> str:
         """Create system prompt for another agent given an input task."""
@@ -239,11 +257,7 @@ class RAGAgentBuilder:
         self._cache.agent = agent
 
         # save the cache to disk
-        agent_cache_path = f"{self._cache_dir}/{agent_id}"
-        self._cache.save_to_disk(agent_cache_path)
-        # save to agent ids
-        add_agent_id_to_directory(str(self._cache_dir), agent_id)
-
+        self._agent_registry.add_new_agent_cache(agent_id, self._cache)
         return "Agent created successfully."
 
     def update_agent(
@@ -265,8 +279,7 @@ class RAGAgentBuilder:
         NOTE: Currently is manually called, not meant for agent use.
 
         """
-        # remove saved agent from directory, since we'll be re-saving
-        remove_agent_from_directory(str(AGENT_CACHE_DIR), self.cache.agent_id)
+        self._agent_registry.delete_agent_cache(agent_id)
 
         # set agent id
         self.cache.agent_id = agent_id
@@ -359,10 +372,11 @@ def _get_builder_agent_tools(agent_builder: RAGAgentBuilder) -> List[FunctionToo
 # @st.cache_resource
 def load_meta_agent_and_tools(
     cache: Optional[ParamCache] = None,
+    agent_registry: Optional[AgentCacheRegistry] = None,
 ) -> Tuple[BaseAgent, RAGAgentBuilder]:
 
     # think of this as tools for the agent to use
-    agent_builder = RAGAgentBuilder(cache)
+    agent_builder = RAGAgentBuilder(cache, agent_registry=agent_registry)
 
     fn_tools = _get_builder_agent_tools(agent_builder)
 

@@ -1,12 +1,14 @@
 import streamlit as st
 from streamlit_pills import pills
+from typing import cast
 
 from core.agent_builder import (
     load_meta_agent_and_tools,
     load_agent_ids_from_directory,
+    AgentCacheRegistry,
 )
-from st_utils import add_sidebar
-from constants import (
+from st_utils import add_sidebar, get_current_state
+from core.constants import (
     AGENT_CACHE_DIR,
 )
 
@@ -37,27 +39,9 @@ if "metaphor_key" in st.secrets:
 
 add_sidebar()
 
+current_state = get_current_state()
 
-if (
-    "selected_cache" in st.session_state.keys()
-    and st.session_state.selected_cache is not None
-):
-    # create builder agent / tools from selected cache
-    builder_agent, agent_builder = load_meta_agent_and_tools(
-        cache=st.session_state.selected_cache
-    )
-else:
-    # create builder agent / tools from new cache
-    builder_agent, agent_builder = load_meta_agent_and_tools()
-
-
-st.info(f"Currently building/editing agent: {agent_builder.cache.agent_id}", icon="ℹ️")
-
-
-if "builder_agent" not in st.session_state.keys():
-    st.session_state.builder_agent = builder_agent
-if "agent_builder" not in st.session_state.keys():
-    st.session_state.agent_builder = agent_builder
+st.info(f"Currently building/editing agent: {current_state.cache.agent_id}", icon="ℹ️")
 
 # add pills
 selected = pills(
@@ -97,12 +81,12 @@ if prompt := st.chat_input(
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = st.session_state.builder_agent.chat(prompt)
+            response = current_state.builder_agent.chat(prompt)
             st.write(str(response))
             add_to_message_history("assistant", str(response))
 
             # check agent_ids again, if it doesn't match, add to directory and refresh
-            agent_ids = load_agent_ids_from_directory(str(AGENT_CACHE_DIR))
+            agent_ids = current_state.agent_registry.get_agent_ids()
             # check diff between agent_ids and cur agent ids
             diff_ids = list(set(agent_ids) - set(st.session_state.cur_agent_ids))
             if len(diff_ids) > 0:

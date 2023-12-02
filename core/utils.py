@@ -37,64 +37,6 @@ import shutil
 from llama_index.callbacks import CallbackManager
 from callback_manager import StreamlitFunctionsCallbackHandler
 
-def _resolve_llm(llm_str: str) -> LLM:
-    """Resolve LLM."""
-    # TODO: make this less hardcoded with if-else statements
-    # see if there's a prefix
-    # - if there isn't, assume it's an OpenAI model
-    # - if there is, resolve it
-    tokens = llm_str.split(":")
-    if len(tokens) == 1:
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm: LLM = OpenAI(model=llm_str)
-    elif tokens[0] == "local":
-        llm = resolve_llm(llm_str)
-    elif tokens[0] == "openai":
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=tokens[1])
-    elif tokens[0] == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
-        llm = Anthropic(model=tokens[1])
-    elif tokens[0] == "replicate":
-        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
-        llm = Replicate(model=tokens[1])
-    else:
-        raise ValueError(f"LLM {llm_str} not recognized.")
-    return llm
-
-####################
-#### META TOOLS ####
-####################
-
-
-# System prompt tool
-GEN_SYS_PROMPT_STR = """\
-Task information is given below. 
-
-Given the task, please generate a system prompt for an OpenAI-powered bot \
-to solve this task: 
-{task} \
-
-Make sure the system prompt obeys the following requirements:
-- Tells the bot to ALWAYS use tools given to solve the task. \
-NEVER give an answer without using a tool.
-- Does not reference a specific data source. \
-The data source is implicit in any queries to the bot, \
-and telling the bot to analyze a specific data source might confuse it given a \
-user query.
-
-"""
-
-gen_sys_prompt_messages = [
-    ChatMessage(
-        role="system",
-        content="You are helping to build a system prompt for another bot.",
-    ),
-    ChatMessage(role="user", content=GEN_SYS_PROMPT_STR),
-]
-
-GEN_SYS_PROMPT_TMPL = ChatPromptTemplate(gen_sys_prompt_messages)
-
 
 class RAGParams(BaseModel):
     """RAG parameters.
@@ -119,6 +61,32 @@ class RAGParams(BaseModel):
     llm: str = Field(
         default="gpt-4-1106-preview", description="LLM to use for summarization."
     )
+
+
+def _resolve_llm(llm_str: str) -> LLM:
+    """Resolve LLM."""
+    # TODO: make this less hardcoded with if-else statements
+    # see if there's a prefix
+    # - if there isn't, assume it's an OpenAI model
+    # - if there is, resolve it
+    tokens = llm_str.split(":")
+    if len(tokens) == 1:
+        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        llm: LLM = OpenAI(model=llm_str)
+    elif tokens[0] == "local":
+        llm = resolve_llm(llm_str)
+    elif tokens[0] == "openai":
+        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        llm = OpenAI(model=tokens[1])
+    elif tokens[0] == "anthropic":
+        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
+        llm = Anthropic(model=tokens[1])
+    elif tokens[0] == "replicate":
+        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
+        llm = Replicate(model=tokens[1])
+    else:
+        raise ValueError(f"LLM {llm_str} not recognized.")
+    return llm
 
 
 def load_data(
@@ -366,4 +334,3 @@ def get_tool_objects(tool_names: List[str]) -> List:
             raise ValueError(f"Tool {tool_name} not recognized.")
 
     return tool_objs
-
