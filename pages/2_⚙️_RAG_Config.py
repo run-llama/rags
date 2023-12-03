@@ -69,9 +69,10 @@ st.set_page_config(
     menu_items=None,
 )
 st.title("RAG Pipeline Config")
-add_sidebar()
 
 current_state = get_current_state()
+add_sidebar()
+
 
 
 if current_state.agent_builder is not None:

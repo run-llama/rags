@@ -94,6 +94,13 @@ def get_current_state() -> CurrentSessionState:
     if "cur_agent_ids" not in st.session_state.keys():
         st.session_state.cur_agent_ids = agent_registry.get_agent_ids()
 
+    if "selected_id" not in st.session_state.keys():
+        st.session_state.selected_id = None
+
+    if "selected_cache" not in st.session_state.keys():
+        st.session_state.selected_cache = None
+
+    # set builder agent / agent builder
     if (
         "selected_cache" in st.session_state.keys()
         and st.session_state.selected_cache is not None

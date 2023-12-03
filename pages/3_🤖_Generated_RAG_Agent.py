@@ -17,6 +17,7 @@ st.set_page_config(
 )
 st.title("Generated RAG Agent")
 
+current_state = get_current_state()
 add_sidebar()
 
 if (
@@ -44,8 +45,6 @@ def display_messages() -> None:
             else:
                 raise ValueError(f"Unknown message type: {msg_type}")
 
-
-current_state = get_current_state()
 
 # if agent is created, then we can chat with it
 if current_state.cache is not None and current_state.cache.agent is not None:

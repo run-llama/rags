@@ -28,9 +28,9 @@ if "metaphor_key" in st.secrets:
     st.info("**NOTE**: The ability to add web search is enabled.")
 
 
+current_state = get_current_state()
 add_sidebar()
 
-current_state = get_current_state()
 
 st.info(f"Currently building/editing agent: {current_state.cache.agent_id}", icon="ℹ️")
 
