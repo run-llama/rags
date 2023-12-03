@@ -91,6 +91,9 @@ class AgentCacheRegistry:
             # recursive delete
             shutil.rmtree(full_path)
 
+        print("TMP DIR: ", self._dir)
+        print(f"Deleted agent {agent_id}.")
+
 
 # System prompt tool
 GEN_SYS_PROMPT_STR = """\
@@ -270,7 +273,7 @@ class RAGAgentBuilder:
         NOTE: Currently is manually called, not meant for agent use.
 
         """
-        self._agent_registry.delete_agent_cache(agent_id)
+        self._agent_registry.delete_agent_cache(self.cache.agent_id)
 
         # set agent id
         self.cache.agent_id = agent_id

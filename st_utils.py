@@ -21,13 +21,13 @@ def update_selected_agent_with_id(selected_id: Optional[str] = None) -> None:
     st.session_state.selected_id = (
         selected_id if selected_id != "Create a new agent" else None
     )
-    if st.session_state.selected_id is None:
-        st.session_state.selected_cache = None
-    else:
-        # load agent from directory
-        agent_registry = cast(AgentCacheRegistry, st.session_state.agent_registry)
-        agent_cache = agent_registry.get_agent_cache(st.session_state.selected_id)
-        st.session_state.selected_cache = agent_cache
+
+    # clear agent builder and builder agent
+    st.session_state.builder_agent = None
+    st.session_state.agent_builder = None
+
+    # clear selected cache
+    st.session_state.selected_cache = None
 
 
 ## handler for sidebar specifically
@@ -42,6 +42,9 @@ def add_sidebar() -> None:
     """Add sidebar."""
     with st.sidebar:
         agent_registry = cast(AgentCacheRegistry, st.session_state.agent_registry)
+        print("AGENT IDS")
+        print(agent_registry._dir)
+        print(agent_registry.get_agent_ids())
         st.session_state.cur_agent_ids = agent_registry.get_agent_ids()
         choices = ["Create a new agent"] + st.session_state.cur_agent_ids
 
@@ -97,35 +100,45 @@ def get_current_state() -> CurrentSessionState:
     if "selected_id" not in st.session_state.keys():
         st.session_state.selected_id = None
 
-    if "selected_cache" not in st.session_state.keys():
-        st.session_state.selected_cache = None
+    # set selected cache if doesn't exist
+    if "selected_cache" not in st.session_state.keys() or st.session_state.selected_cache is None:
+        # update selected cache
+        if st.session_state.selected_id is None:
+            st.session_state.selected_cache = None
+        else:
+            # load agent from directory
+            agent_registry = cast(AgentCacheRegistry, st.session_state.agent_registry)
+            agent_cache = agent_registry.get_agent_cache(st.session_state.selected_id)
+            st.session_state.selected_cache = agent_cache
 
     # set builder agent / agent builder
-    if (
-        "selected_cache" in st.session_state.keys()
-        and st.session_state.selected_cache is not None
-    ):
-        # create builder agent / tools from selected cache
-        builder_agent, agent_builder = load_meta_agent_and_tools(
-            cache=st.session_state.selected_cache,
-            agent_registry=st.session_state.agent_registry,
-        )
-    else:
-        # create builder agent / tools from new cache
-        builder_agent, agent_builder = load_meta_agent_and_tools(
-            agent_registry=st.session_state.agent_registry
-        )
+    if ("builder_agent" not in st.session_state.keys() 
+        or st.session_state.builder_agent is None
+        or "agent_builder" not in st.session_state.keys()
+        or st.session_state.agent_builder is None):
+        if (
+            "selected_cache" in st.session_state.keys()
+            and st.session_state.selected_cache is not None
+        ):
+            # create builder agent / tools from selected cache
+            builder_agent, agent_builder = load_meta_agent_and_tools(
+                cache=st.session_state.selected_cache,
+                agent_registry=st.session_state.agent_registry,
+            )
+        else:
+            # create builder agent / tools from new cache
+            builder_agent, agent_builder = load_meta_agent_and_tools(
+                agent_registry=st.session_state.agent_registry
+            )
 
-    if "builder_agent" not in st.session_state.keys():
         st.session_state.builder_agent = builder_agent
-    if "agent_builder" not in st.session_state.keys():
         st.session_state.agent_builder = agent_builder
 
     return CurrentSessionState(
         agent_registry=st.session_state.agent_registry,
         selected_id=st.session_state.selected_id,
         selected_cache=st.session_state.selected_cache,
-        agent_builder=agent_builder,
-        cache=agent_builder.cache,
-        builder_agent=builder_agent,
+        agent_builder=st.session_state.agent_builder,
+        cache=st.session_state.agent_builder.cache,
+        builder_agent=st.session_state.builder_agent,
     )
