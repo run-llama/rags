@@ -120,11 +120,12 @@ class ParamCache(BaseModel):
         additional_tools = get_tool_objects(cache_dict["tools"])
 
         if cache_dict["builder_type"] == "multimodal":
+            vector_index = cast(MultiModalVectorStoreIndex, vector_index)
             agent, _ = construct_mm_agent(
                 cache_dict["system_prompt"],
                 cache_dict["rag_params"],
                 cache_dict["docs"],
-                vector_index=vector_index,
+                mm_vector_index=vector_index,
             )
         else:
             agent, _ = construct_agent(

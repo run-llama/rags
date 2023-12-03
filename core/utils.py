@@ -29,6 +29,9 @@ from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
 from llama_index.callbacks import CallbackManager
 from core.callback_manager import StreamlitFunctionsCallbackHandler
+from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
+from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
+from llama_index.schema import ImageNode, NodeWithScore
 
 
 class RAGParams(BaseModel):
@@ -369,6 +372,10 @@ class MultimodalChatEngine(BaseChatEngine):
     def reset(self) -> None:
         """Reset conversation state."""
         pass
+    
+    @property
+    def chat_history(self) -> List[ChatMessage]:
+        return []
 
     @trace_method("chat")
     def chat(
@@ -377,7 +384,7 @@ class MultimodalChatEngine(BaseChatEngine):
         """Main chat interface."""
         # just return the top-k results
         response = self._mm_query_engine.query(message)
-        return AgentChatResponse(response=str(response))
+        return AgentChatResponse(response=str(response), source_nodes=response.source_nodes)
 
     @trace_method("chat")
     def stream_chat(
@@ -390,7 +397,7 @@ class MultimodalChatEngine(BaseChatEngine):
             yield ChatResponse(message=ChatMessage(role="assistant", content=response))
 
         chat_stream = _chat_stream(str(response))
-        return StreamingAgentChatResponse(chat_stream=chat_stream)
+        return StreamingAgentChatResponse(chat_stream=chat_stream, source_nodes=response.source_nodes)
 
     @trace_method("chat")
     async def achat(
@@ -398,7 +405,7 @@ class MultimodalChatEngine(BaseChatEngine):
     ) -> AGENT_CHAT_RESPONSE_TYPE:
         """Async version of main chat interface."""
         response = await self._mm_query_engine.aquery(message)
-        return AgentChatResponse(response=str(response))
+        return AgentChatResponse(response=str(response), source_nodes=response.source_nodes)
 
     @trace_method("chat")
     async def astream_chat(
@@ -444,16 +451,30 @@ def construct_mm_agent(
     else:
         pass
         
-    query_engine = mm_vector_index.as_query_engine(
-        multi_modal_llm=openai_mm_llm,
+    mm_retriever = mm_vector_index.as_retriever(
         similarity_top_k=rag_params.top_k
+    )
+    mm_query_engine = SimpleMultiModalQueryEngine(
+        mm_retriever,
+        multi_modal_llm=openai_mm_llm,
     )
 
     extra_info["vector_index"] = mm_vector_index
 
     # use condense + context chat engine
-    agent = MultimodalChatEngine(query_engine)
+    agent = MultimodalChatEngine(mm_query_engine)
 
     return agent, extra_info
 
 
+def get_image_and_text_nodes(
+    nodes: List[NodeWithScore],
+) -> Tuple[List[NodeWithScore], List[NodeWithScore]]:
+    image_nodes = []
+    text_nodes = []
+    for res_node in nodes:
+        if isinstance(res_node.node, ImageNode):
+            image_nodes.append(res_node)
+        else:
+            text_nodes.append(res_node)
+    return image_nodes, text_nodes
