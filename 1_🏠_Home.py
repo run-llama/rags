@@ -29,12 +29,12 @@ if "metaphor_key" in st.secrets:
 
 # Let's add a toggle-able dropdown
 with st.expander("Builder Config (Advanced)"):
-    # add a few options - openai api key, and 
+    # add a few options - openai api key, and
     is_multimodal_st = st.checkbox(
-        "Enable multimodal search (beta)", key="is_multimodal_st",
-        on_change=update_selected_agent
+        "Enable multimodal search (beta)",
+        key="is_multimodal_st",
+        on_change=update_selected_agent,
     )
-
 
 
 current_state = get_current_state()

@@ -3,6 +3,7 @@ import streamlit as st
 from st_utils import add_sidebar, get_current_state
 from core.utils import get_image_and_text_nodes
 from llama_index.response.schema import Response
+from llama_index.chat_engine.types import AGENT_CHAT_RESPONSE_TYPE
 from typing import Dict, Optional
 import pandas as pd
 
@@ -32,7 +33,7 @@ if (
     ]
 
 
-def display_sources(response: Response) -> None:
+def display_sources(response: AGENT_CHAT_RESPONSE_TYPE) -> None:
     image_nodes, text_nodes = get_image_and_text_nodes(response.source_nodes)
     with st.expander("Sources"):
         # get image nodes
@@ -48,14 +49,16 @@ def display_sources(response: Response) -> None:
                 sources_df_list.append(
                     {
                         "ID": text_node.id_,
-                        "Text": text_node.get_content(metadata_mode="all"),
+                        "Text": text_node.node.get_content(metadata_mode="all"),
                     }
                 )
             sources_df = pd.DataFrame(sources_df_list)
             st.dataframe(sources_df)
-            
 
-def add_to_message_history(role: str, content: str, extra: Optional[Dict] = None) -> None:
+
+def add_to_message_history(
+    role: str, content: str, extra: Optional[Dict] = None
+) -> None:
     message = {"role": role, "content": str(content), "extra": extra}
     st.session_state.agent_messages.append(message)  # Add response to message history
 
@@ -100,11 +103,13 @@ if current_state.cache is not None and current_state.cache.agent is not None:
             with st.spinner("Thinking..."):
                 response = agent.chat(str(prompt))
                 st.write(str(response))
-                
+
                 # display sources
                 # Multi-modal: check if image nodes are present
                 display_sources(response)
 
-                add_to_message_history("assistant", str(response), extra={"response": response})
+                add_to_message_history(
+                    "assistant", str(response), extra={"response": response}
+                )
 else:
     st.info("Agent not created. Please create an agent in the above section.")

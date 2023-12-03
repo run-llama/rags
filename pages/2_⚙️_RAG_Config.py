@@ -106,9 +106,11 @@ if current_state.agent_builder is not None:
             disabled=True,
         )
         urls = st.text_input(
-            "URLs (not editable)", value=",".join(current_state.cache.urls), disabled=True
+            "URLs (not editable)",
+            value=",".join(current_state.cache.urls),
+            disabled=True,
         )
-        
+
     include_summarization_st = st.checkbox(
         "Include Summarization (only works for GPT-4)",
         value=rag_params.include_summarization,

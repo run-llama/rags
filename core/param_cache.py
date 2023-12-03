@@ -11,7 +11,13 @@ from llama_index.chat_engine.types import BaseChatEngine
 from pathlib import Path
 import json
 import uuid
-from core.utils import load_data, get_tool_objects, construct_agent, RAGParams, construct_mm_agent
+from core.utils import (
+    load_data,
+    get_tool_objects,
+    construct_agent,
+    RAGParams,
+    construct_mm_agent,
+)
 
 
 class ParamCache(BaseModel):
@@ -52,7 +58,9 @@ class ParamCache(BaseModel):
     )
 
     # agent params
-    builder_type: str = Field(default="default", description="Builder type (default, multimodal).")
+    builder_type: str = Field(
+        default="default", description="Builder type (default, multimodal)."
+    )
     vector_index: Optional[VectorStoreIndex] = Field(
         default=None, description="Vector index for RAG agent."
     )
@@ -103,10 +111,14 @@ class ParamCache(BaseModel):
         )
         if cache_dict["builder_type"] == "multimodal":
             from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
-            vector_index = cast(MultiModalVectorStoreIndex, load_index_from_storage(storage_context))
-        else:
-            vector_index = cast(VectorStoreIndex, load_index_from_storage(storage_context))
 
+            vector_index: VectorStoreIndex = cast(
+                MultiModalVectorStoreIndex, load_index_from_storage(storage_context)
+            )
+        else:
+            vector_index = cast(
+                VectorStoreIndex, load_index_from_storage(storage_context)
+            )
 
         # replace rag params with RAGParams object
         cache_dict["rag_params"] = RAGParams(**cache_dict["rag_params"])
@@ -114,7 +126,9 @@ class ParamCache(BaseModel):
         # add in the missing fields
         # load docs
         cache_dict["docs"] = load_data(
-            file_names=cache_dict["file_names"], urls=cache_dict["urls"], directory=cache_dict["directory"]
+            file_names=cache_dict["file_names"],
+            urls=cache_dict["urls"],
+            directory=cache_dict["directory"],
         )
         # load agent from index
         additional_tools = get_tool_objects(cache_dict["tools"])

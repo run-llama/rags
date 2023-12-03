@@ -62,7 +62,11 @@ from llama_index.indices.multi_modal.retriever import (
     MultiModalVectorIndexRetriever,
 )
 from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
-from llama_index.chat_engine.types import AGENT_CHAT_RESPONSE_TYPE, StreamingAgentChatResponse, AgentChatResponse
+from llama_index.chat_engine.types import (
+    AGENT_CHAT_RESPONSE_TYPE,
+    StreamingAgentChatResponse,
+    AgentChatResponse,
+)
 from llama_index.llms.base import ChatResponse
 from typing import Generator
 
@@ -72,8 +76,9 @@ class MultimodalChatEngine(BaseChatEngine):
 
     This chat engine is a light wrapper around a query engine.
     Offers no real 'chat' functionality, is a beta feature.
-    
+
     """
+
     def __init__(self, mm_query_engine: SimpleMultiModalQueryEngine) -> None:
         """Init params."""
         self._mm_query_engine = mm_query_engine
@@ -97,7 +102,7 @@ class MultimodalChatEngine(BaseChatEngine):
     ) -> StreamingAgentChatResponse:
         """Stream chat interface."""
         response = self._mm_query_engine.query(message)
-        
+
         def _chat_stream(response: str) -> Generator[ChatResponse, None, None]:
             yield ChatResponse(message=ChatMessage(role="assistant", content=response))
 
@@ -118,7 +123,6 @@ class MultimodalChatEngine(BaseChatEngine):
     ) -> StreamingAgentChatResponse:
         """Async version of main chat interface."""
         return self.stream_chat(message, chat_history)
-
 
 
 class MultimodalRAGAgentBuilder(BaseRAGAgentBuilder):
@@ -165,7 +169,7 @@ class MultimodalRAGAgentBuilder(BaseRAGAgentBuilder):
         return f"System prompt created: {response.message.content}"
 
     def load_data(
-        self, 
+        self,
         file_names: Optional[List[str]] = None,
         directory: Optional[str] = None,
     ) -> str:

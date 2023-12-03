@@ -22,7 +22,7 @@ from core.utils import (
     load_meta_agent,
 )
 from core.agent_builder.registry import AgentCacheRegistry
-from core.agent_builder.base import RAGAgentBuilder
+from core.agent_builder.base import RAGAgentBuilder, BaseRAGAgentBuilder
 from core.agent_builder.multimodal import MultimodalRAGAgentBuilder
 
 ####################
@@ -80,9 +80,11 @@ def _get_builder_agent_tools(agent_builder: RAGAgentBuilder) -> List[FunctionToo
     return fn_tools
 
 
-def _get_mm_builder_agent_tools(agent_builder: MultimodalRAGAgentBuilder) -> List[FunctionTool]:
+def _get_mm_builder_agent_tools(
+    agent_builder: MultimodalRAGAgentBuilder,
+) -> List[FunctionTool]:
     """Get list of builder agent tools to pass to the builder agent."""
-    fns = [
+    fns: List[Callable] = [
         agent_builder.create_system_prompt,
         agent_builder.load_data,
         agent_builder.get_rag_params,
@@ -99,11 +101,13 @@ def load_meta_agent_and_tools(
     cache: Optional[ParamCache] = None,
     agent_registry: Optional[AgentCacheRegistry] = None,
     is_multimodal: bool = False,
-) -> Tuple[BaseAgent, RAGAgentBuilder]:
+) -> Tuple[BaseAgent, BaseRAGAgentBuilder]:
     """Load meta agent and tools."""
 
     if is_multimodal:
-        agent_builder = MultimodalRAGAgentBuilder(cache, agent_registry=agent_registry)
+        agent_builder: BaseRAGAgentBuilder = MultimodalRAGAgentBuilder(
+            cache, agent_registry=agent_registry
+        )
         fn_tools = _get_mm_builder_agent_tools(agent_builder)
         builder_agent = load_meta_agent(
             fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True

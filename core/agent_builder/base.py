@@ -68,7 +68,6 @@ class BaseRAGAgentBuilder(ABC):
         """Agent registry."""
 
 
-
 class RAGAgentBuilder(BaseRAGAgentBuilder):
     """RAG Agent builder.
 
@@ -113,10 +112,10 @@ class RAGAgentBuilder(BaseRAGAgentBuilder):
         return f"System prompt created: {response.message.content}"
 
     def load_data(
-        self, 
+        self,
         file_names: Optional[List[str]] = None,
         directory: Optional[str] = None,
-        urls: Optional[List[str]] = None
+        urls: Optional[List[str]] = None,
     ) -> str:
         """Load data for a given task.
 
