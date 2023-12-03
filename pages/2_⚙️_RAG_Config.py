@@ -23,7 +23,7 @@ def update_agent() -> None:
         "agent_builder" in st.session_state.keys()
         and st.session_state.agent_builder is not None
     ):
-        additional_tools = st.session_state.additional_tools_st.split(",")
+        additional_tools = st.session_state.additional_tools_st.strip().split(",")
         if additional_tools == [""]:
             additional_tools = []
         agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
