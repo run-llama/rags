@@ -40,6 +40,8 @@ streamlit run 1_🏠_Home.py
 
 ```
 
+**NOTE**: If you've upgraded the version of RAGs, and you're running into issues on launch, you may need to delete the `cache` folder in your home directory (we may have introduced breaking changes in the stored data structure between versions).
+
 ## Detailed Overview
 
 The app contains the following sections, corresponding to the steps listed above.
