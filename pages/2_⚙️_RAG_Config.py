@@ -24,6 +24,8 @@ def update_agent() -> None:
         and st.session_state.agent_builder is not None
     ):
         additional_tools = st.session_state.additional_tools_st.split(",")
+        if additional_tools == [""]:
+            additional_tools = []
         agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
         ### Update the agent
         agent_builder.update_agent(
@@ -72,7 +74,6 @@ st.title("RAG Pipeline Config")
 
 current_state = get_current_state()
 add_sidebar()
-
 
 
 if current_state.agent_builder is not None:

@@ -91,9 +91,6 @@ class AgentCacheRegistry:
             # recursive delete
             shutil.rmtree(full_path)
 
-        print("TMP DIR: ", self._dir)
-        print(f"Deleted agent {agent_id}.")
-
 
 # System prompt tool
 GEN_SYS_PROMPT_STR = """\

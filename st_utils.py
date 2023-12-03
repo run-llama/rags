@@ -42,9 +42,6 @@ def add_sidebar() -> None:
     """Add sidebar."""
     with st.sidebar:
         agent_registry = cast(AgentCacheRegistry, st.session_state.agent_registry)
-        print("AGENT IDS")
-        print(agent_registry._dir)
-        print(agent_registry.get_agent_ids())
         st.session_state.cur_agent_ids = agent_registry.get_agent_ids()
         choices = ["Create a new agent"] + st.session_state.cur_agent_ids
 
@@ -101,7 +98,10 @@ def get_current_state() -> CurrentSessionState:
         st.session_state.selected_id = None
 
     # set selected cache if doesn't exist
-    if "selected_cache" not in st.session_state.keys() or st.session_state.selected_cache is None:
+    if (
+        "selected_cache" not in st.session_state.keys()
+        or st.session_state.selected_cache is None
+    ):
         # update selected cache
         if st.session_state.selected_id is None:
             st.session_state.selected_cache = None
@@ -112,10 +112,12 @@ def get_current_state() -> CurrentSessionState:
             st.session_state.selected_cache = agent_cache
 
     # set builder agent / agent builder
-    if ("builder_agent" not in st.session_state.keys() 
+    if (
+        "builder_agent" not in st.session_state.keys()
         or st.session_state.builder_agent is None
         or "agent_builder" not in st.session_state.keys()
-        or st.session_state.agent_builder is None):
+        or st.session_state.agent_builder is None
+    ):
         if (
             "selected_cache" in st.session_state.keys()
             and st.session_state.selected_cache is not None
