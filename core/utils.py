@@ -27,7 +27,7 @@ from typing import Dict, Tuple, Any
 import streamlit as st
 
 from llama_index.callbacks import CallbackManager
-from callback_manager import StreamlitFunctionsCallbackHandler
+from core.callback_manager import StreamlitFunctionsCallbackHandler
 
 
 class RAGParams(BaseModel):
