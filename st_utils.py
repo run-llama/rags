@@ -63,6 +63,10 @@ def add_sidebar() -> None:
 class CurrentSessionState(BaseModel):
     """Current session state."""
 
+    # arbitrary types
+    class Config:
+        arbitrary_types_allowed = True
+
     agent_registry: AgentCacheRegistry
     selected_id: Optional[str]
     selected_cache: Optional[ParamCache]
