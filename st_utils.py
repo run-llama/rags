@@ -1,14 +1,15 @@
 """Streamlit utils."""
-from core.agent_builder import (
+from core.agent_builder.loader import (
     load_meta_agent_and_tools,
     AgentCacheRegistry,
     RAGAgentBuilder,
 )
+from core.agent_builder.base import BaseRAGAgentBuilder
 from core.param_cache import ParamCache
 from core.constants import (
     AGENT_CACHE_DIR,
 )
-from typing import Optional, cast
+from typing import Optional, cast, Dict
 from pydantic import BaseModel
 
 from llama_index.agent.types import BaseAgent
@@ -36,6 +37,13 @@ def update_selected_agent() -> None:
     selected_id = st.session_state.agent_selector
 
     update_selected_agent_with_id(selected_id)
+
+
+def get_is_multimodal() -> bool:
+    """Get is multimodal."""
+    if "is_multimodal_st" not in st.session_state.keys():
+        st.session_state.is_multimodal_st = False
+    return st.session_state.is_multimodal_st
 
 
 def add_sidebar() -> None:
@@ -70,7 +78,7 @@ class CurrentSessionState(BaseModel):
     agent_registry: AgentCacheRegistry
     selected_id: Optional[str]
     selected_cache: Optional[ParamCache]
-    agent_builder: RAGAgentBuilder
+    agent_builder: BaseRAGAgentBuilder
     cache: ParamCache
     builder_agent: BaseAgent
 
@@ -126,11 +134,15 @@ def get_current_state() -> CurrentSessionState:
             builder_agent, agent_builder = load_meta_agent_and_tools(
                 cache=st.session_state.selected_cache,
                 agent_registry=st.session_state.agent_registry,
+                # NOTE: we will probably generalize this later into different
+                # builder configs
+                is_multimodal=get_is_multimodal(),
             )
         else:
             # create builder agent / tools from new cache
             builder_agent, agent_builder = load_meta_agent_and_tools(
-                agent_registry=st.session_state.agent_registry
+                agent_registry=st.session_state.agent_registry,
+                is_multimodal=get_is_multimodal(),
             )
 
         st.session_state.builder_agent = builder_agent
