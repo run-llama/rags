@@ -108,7 +108,7 @@ def load_meta_agent_and_tools(
         agent_builder: BaseRAGAgentBuilder = MultimodalRAGAgentBuilder(
             cache, agent_registry=agent_registry
         )
-        fn_tools = _get_mm_builder_agent_tools(agent_builder)
+        fn_tools = _get_mm_builder_agent_tools(cast(MultimodalRAGAgentBuilder, agent_builder))
         builder_agent = load_meta_agent(
             fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True
         )
