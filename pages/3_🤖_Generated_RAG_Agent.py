@@ -3,7 +3,6 @@ import streamlit as st
 from st_utils import add_sidebar, get_current_state
 from core.utils import get_image_and_text_nodes
 from llama_index.schema import MetadataMode
-from llama_index.response.schema import Response
 from llama_index.chat_engine.types import AGENT_CHAT_RESPONSE_TYPE
 from typing import Dict, Optional
 import pandas as pd
@@ -50,7 +49,9 @@ def display_sources(response: AGENT_CHAT_RESPONSE_TYPE) -> None:
                 sources_df_list.append(
                     {
                         "ID": text_node.id_,
-                        "Text": text_node.node.get_content(metadata_mode=MetadataMode.ALL),
+                        "Text": text_node.node.get_content(
+                            metadata_mode=MetadataMode.ALL
+                        ),
                     }
                 )
             sources_df = pd.DataFrame(sources_df_list)

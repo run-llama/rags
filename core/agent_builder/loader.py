@@ -1,24 +1,14 @@
 """Loader agent."""
 
-from llama_index.llms import ChatMessage
-from llama_index.prompts import ChatPromptTemplate
 from typing import List, cast, Optional
 from llama_index.tools import FunctionTool
 from llama_index.agent.types import BaseAgent
 from core.builder_config import BUILDER_LLM
-from typing import Dict, Tuple, Any, Callable, Union
+from typing import Tuple, Callable
 import streamlit as st
-from pathlib import Path
-import json
-import uuid
-from core.constants import AGENT_CACHE_DIR
-import shutil
 
-from core.param_cache import ParamCache, RAGParams
+from core.param_cache import ParamCache
 from core.utils import (
-    load_data,
-    get_tool_objects,
-    construct_agent,
     load_meta_agent,
 )
 from core.agent_builder.registry import AgentCacheRegistry
@@ -108,7 +98,9 @@ def load_meta_agent_and_tools(
         agent_builder: BaseRAGAgentBuilder = MultimodalRAGAgentBuilder(
             cache, agent_registry=agent_registry
         )
-        fn_tools = _get_mm_builder_agent_tools(cast(MultimodalRAGAgentBuilder, agent_builder))
+        fn_tools = _get_mm_builder_agent_tools(
+            cast(MultimodalRAGAgentBuilder, agent_builder)
+        )
         builder_agent = load_meta_agent(
             fn_tools, llm=BUILDER_LLM, system_prompt=RAG_BUILDER_SYS_STR, verbose=True
         )

@@ -25,13 +25,26 @@ from llama_index.chat_engine import CondensePlusContextChatEngine
 from core.builder_config import BUILDER_LLM
 from typing import Dict, Tuple, Any
 import streamlit as st
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
-from llama_index.callbacks import CallbackManager
+from llama_index.callbacks import CallbackManager, trace_method
 from core.callback_manager import StreamlitFunctionsCallbackHandler
-from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
-from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
 from llama_index.schema import ImageNode, NodeWithScore
+
+### BETA: Multi-modal
+from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
+from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.indices.multi_modal.retriever import (
+    MultiModalVectorIndexRetriever,
+)
+from llama_index.llms import ChatMessage
+from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
+from llama_index.chat_engine.types import (
+    AGENT_CHAT_RESPONSE_TYPE,
+    StreamingAgentChatResponse,
+    AgentChatResponse,
+)
+from llama_index.llms.base import ChatResponse
+from typing import Generator
 
 
 class RAGParams(BaseModel):
@@ -340,24 +353,6 @@ def get_tool_objects(tool_names: List[str]) -> List:
             raise ValueError(f"Tool {tool_name} not recognized.")
 
     return tool_objs
-
-
-### BETA: Multi-modal
-from llama_index.callbacks import CallbackManager, trace_method
-from core.callback_manager import StreamlitFunctionsCallbackHandler
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal
-from llama_index.indices.multi_modal.retriever import (
-    MultiModalVectorIndexRetriever,
-)
-from llama_index.llms import ChatMessage
-from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
-from llama_index.chat_engine.types import (
-    AGENT_CHAT_RESPONSE_TYPE,
-    StreamingAgentChatResponse,
-    AgentChatResponse,
-)
-from llama_index.llms.base import ChatResponse
-from typing import Generator
 
 
 class MultimodalChatEngine(BaseChatEngine):
