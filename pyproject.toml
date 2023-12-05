@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rags"
-version = "0.0.4"
+version = "0.0.5"
 description = "Build RAG with natural language."
 authors = ["Jerry Liu"]
 # New attributes
