@@ -1,16 +1,15 @@
 """Streamlit page showing builder config."""
 import streamlit as st
-from typing import cast, Optional
 
-from agent_utils import (
+from core.param_cache import (
     RAGParams,
-    RAGAgentBuilder,
-    ParamCache,
-    remove_agent_from_directory,
 )
-from st_utils import update_selected_agent_with_id
-from constants import AGENT_CACHE_DIR
-from st_utils import add_sidebar
+from core.agent_builder.loader import (
+    RAGAgentBuilder,
+    AgentCacheRegistry,
+)
+from st_utils import update_selected_agent_with_id, get_current_state, add_sidebar
+from typing import cast
 
 
 ####################
@@ -21,11 +20,13 @@ from st_utils import add_sidebar
 def update_agent() -> None:
     """Update agent."""
     if (
-        "config_agent_builder" in st.session_state.keys()
-        and st.session_state.config_agent_builder is not None
+        "agent_builder" in st.session_state.keys()
+        and st.session_state.agent_builder is not None
     ):
-        additional_tools = st.session_state.additional_tools_st.split(",")
-        agent_builder = cast(RAGAgentBuilder, st.session_state.config_agent_builder)
+        additional_tools = st.session_state.additional_tools_st.strip().split(",")
+        if additional_tools == [""]:
+            additional_tools = []
+        agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
         ### Update the agent
         agent_builder.update_agent(
             st.session_state.agent_id_st,
@@ -47,13 +48,15 @@ def update_agent() -> None:
 def delete_agent() -> None:
     """Delete agent."""
     if (
-        "config_agent_builder" in st.session_state.keys()
-        and st.session_state.config_agent_builder is not None
+        "agent_builder" in st.session_state.keys()
+        and st.session_state.agent_builder is not None
+        and "agent_registry" in st.session_state.keys()
     ):
-        agent_builder = cast(RAGAgentBuilder, st.session_state.config_agent_builder)
+        agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
+        agent_registry = cast(AgentCacheRegistry, st.session_state.agent_registry)
         ### Delete agent
         # remove saved agent from directory
-        remove_agent_from_directory(str(AGENT_CACHE_DIR), agent_builder.cache.agent_id)
+        agent_registry.delete_agent_cache(agent_builder.cache.agent_id)
         # Update Radio Buttons: update selected agent to the new id
         update_selected_agent_with_id(None)
     else:
@@ -68,49 +71,46 @@ st.set_page_config(
     menu_items=None,
 )
 st.title("RAG Pipeline Config")
+
+current_state = get_current_state()
 add_sidebar()
 
-# first, pick the cache: this is preloaded from an existing agent,
-# or is part of the current one being created
-if (
-    "selected_cache" in st.session_state.keys()
-    and st.session_state.selected_cache is not None
-):
-    cache = cast(ParamCache, st.session_state.selected_cache)
-    agent_builder: Optional[RAGAgentBuilder] = RAGAgentBuilder(cache)
-elif "agent_builder" in st.session_state.keys():
-    agent_builder = cast(RAGAgentBuilder, st.session_state.agent_builder)
-else:
-    agent_builder = None
 
-# set as session state
-st.session_state.config_agent_builder = agent_builder
+if current_state.agent_builder is not None:
 
-if agent_builder is not None:
-
-    st.info(f"Viewing config for agent: {agent_builder.cache.agent_id}", icon="ℹ️")
+    st.info(f"Viewing config for agent: {current_state.cache.agent_id}", icon="ℹ️")
 
     agent_id_st = st.text_input(
-        "Agent ID", value=agent_builder.cache.agent_id, key="agent_id_st"
+        "Agent ID", value=current_state.cache.agent_id, key="agent_id_st"
     )
 
-    if agent_builder.cache.system_prompt is None:
+    if current_state.cache.system_prompt is None:
         system_prompt = ""
     else:
-        system_prompt = agent_builder.cache.system_prompt
+        system_prompt = current_state.cache.system_prompt
     sys_prompt_st = st.text_area(
         "System Prompt", value=system_prompt, key="sys_prompt_st"
     )
 
-    rag_params = cast(RAGParams, agent_builder.cache.rag_params)
-    file_names = st.text_input(
-        "File names (not editable)",
-        value=",".join(agent_builder.cache.file_names),
-        disabled=True,
-    )
-    urls = st.text_input(
-        "URLs (not editable)", value=",".join(agent_builder.cache.urls), disabled=True
-    )
+    rag_params = cast(RAGParams, current_state.cache.rag_params)
+
+    with st.expander("Loaded Data (Expand to view)"):
+        file_names = st.text_input(
+            "File names (not editable)",
+            value=",".join(current_state.cache.file_names),
+            disabled=True,
+        )
+        directory = st.text_input(
+            "Directory (not editable)",
+            value=current_state.cache.directory,
+            disabled=True,
+        )
+        urls = st.text_input(
+            "URLs (not editable)",
+            value=",".join(current_state.cache.urls),
+            disabled=True,
+        )
+
     include_summarization_st = st.checkbox(
         "Include Summarization (only works for GPT-4)",
         value=rag_params.include_summarization,
@@ -120,7 +120,7 @@ if agent_builder is not None:
     # add web tool
     additional_tools_st = st.text_input(
         "Additional tools (currently only supports 'web_search')",
-        value=",".join(agent_builder.cache.tools),
+        value=",".join(current_state.cache.tools),
         key="additional_tools_st",
     )
 
@@ -132,7 +132,7 @@ if agent_builder is not None:
         "Embed Model", value=rag_params.embed_model, key="embed_model_st"
     )
     llm_st = st.text_input("LLM", value=rag_params.llm, key="llm_st")
-    if agent_builder.cache.agent is not None:
+    if current_state.cache.agent is not None:
         st.button("Update Agent", on_click=update_agent)
         st.button(":red[Delete Agent]", on_click=delete_agent)
     else:
