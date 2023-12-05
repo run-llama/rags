@@ -10,7 +10,7 @@ import getenv
 from llama_index.llms import OpenAI
 
 # nickknyc's OpenAI key routine
-os.environ["OPENAI_API_KEY"] = getenv.get("OPENAI_API_KEY")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 # set OpenAI Key - use Streamlit secrets
 # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
