@@ -115,7 +115,7 @@ Please following these steps:
 Write a concise and descriptive title for your issue. This should give a quick overview of the problem or feature you're addressing.
 
 ###  Describe the Issue
-Please pprovide a detailed description of the issue. Include information such as:
+Please provide a detailed description of the issue. Include information such as:
 Steps to reproduce the problem (if it's a bug).
 The expected behavior.
 The actual behavior (if it's a bug).
