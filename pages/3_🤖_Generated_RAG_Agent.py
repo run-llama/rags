@@ -35,27 +35,28 @@ if (
 
 def display_sources(response: AGENT_CHAT_RESPONSE_TYPE) -> None:
     image_nodes, text_nodes = get_image_and_text_nodes(response.source_nodes)
-    with st.expander("Sources"):
-        # get image nodes
-        if len(image_nodes) > 0:
-            st.subheader("Images")
-            for image_node in image_nodes:
-                st.image(image_node.metadata["file_path"])
+    if len(image_nodes) > 0 or len(text_nodes) > 0:
+        with st.expander("Sources"):
+            # get image nodes
+            if len(image_nodes) > 0:
+                st.subheader("Images")
+                for image_node in image_nodes:
+                    st.image(image_node.metadata["file_path"])
 
-        if len(text_nodes) > 0:
-            st.subheader("Text")
-            sources_df_list = []
-            for text_node in text_nodes:
-                sources_df_list.append(
-                    {
-                        "ID": text_node.id_,
-                        "Text": text_node.node.get_content(
-                            metadata_mode=MetadataMode.ALL
-                        ),
-                    }
-                )
-            sources_df = pd.DataFrame(sources_df_list)
-            st.dataframe(sources_df)
+            if len(text_nodes) > 0:
+                st.subheader("Text")
+                sources_df_list = []
+                for text_node in text_nodes:
+                    sources_df_list.append(
+                        {
+                            "ID": text_node.id_,
+                            "Text": text_node.node.get_content(
+                                metadata_mode=MetadataMode.ALL
+                            ),
+                        }
+                    )
+                sources_df = pd.DataFrame(sources_df_list)
+                st.dataframe(sources_df)
 
 
 def add_to_message_history(

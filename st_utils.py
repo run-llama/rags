@@ -38,11 +38,45 @@ def update_selected_agent() -> None:
     update_selected_agent_with_id(selected_id)
 
 
+def get_cached_is_multimodal() -> bool:
+    """Get default multimodal st."""
+    if (
+        "selected_cache" not in st.session_state.keys()
+        or st.session_state.selected_cache is None
+    ):
+        default_val = False
+    else:
+        selected_cache = cast(ParamCache, st.session_state.selected_cache)
+        default_val = True if selected_cache.builder_type == "multimodal" else False
+    return default_val
+
+
 def get_is_multimodal() -> bool:
     """Get is multimodal."""
     if "is_multimodal_st" not in st.session_state.keys():
         st.session_state.is_multimodal_st = False
     return st.session_state.is_multimodal_st
+
+
+def add_builder_config() -> None:
+    """Add builder config."""
+    with st.expander("Builder Config (Advanced)"):
+        # add a few options - openai api key, and
+        if (
+            "selected_cache" not in st.session_state.keys()
+            or st.session_state.selected_cache is None
+        ):
+            is_locked = False
+        else:
+            is_locked = True
+
+        st.checkbox(
+            "Enable multimodal search (beta)",
+            key="is_multimodal_st",
+            on_change=update_selected_agent,
+            value=get_cached_is_multimodal(),
+            disabled=is_locked,
+        )
 
 
 def add_sidebar() -> None:
@@ -135,7 +169,7 @@ def get_current_state() -> CurrentSessionState:
                 agent_registry=st.session_state.agent_registry,
                 # NOTE: we will probably generalize this later into different
                 # builder configs
-                is_multimodal=get_is_multimodal(),
+                is_multimodal=get_cached_is_multimodal(),
             )
         else:
             # create builder agent / tools from new cache

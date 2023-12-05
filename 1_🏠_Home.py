@@ -1,8 +1,13 @@
 import streamlit as st
 from streamlit_pills import pills
 
-from st_utils import add_sidebar, get_current_state, update_selected_agent
+from st_utils import (
+    add_builder_config,
+    add_sidebar,
+    get_current_state,
+)
 
+current_state = get_current_state()
 
 ####################
 #### STREAMLIT #####
@@ -27,17 +32,8 @@ st.info(
 if "metaphor_key" in st.secrets:
     st.info("**NOTE**: The ability to add web search is enabled.")
 
-# Let's add a toggle-able dropdown
-with st.expander("Builder Config (Advanced)"):
-    # add a few options - openai api key, and
-    is_multimodal_st = st.checkbox(
-        "Enable multimodal search (beta)",
-        key="is_multimodal_st",
-        on_change=update_selected_agent,
-    )
 
-
-current_state = get_current_state()
+add_builder_config()
 add_sidebar()
 
 
