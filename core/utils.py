@@ -26,8 +26,25 @@ from core.builder_config import BUILDER_LLM
 from typing import Dict, Tuple, Any
 import streamlit as st
 
-from llama_index.callbacks import CallbackManager
+from llama_index.callbacks import CallbackManager, trace_method
 from core.callback_manager import StreamlitFunctionsCallbackHandler
+from llama_index.schema import ImageNode, NodeWithScore
+
+### BETA: Multi-modal
+from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
+from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.indices.multi_modal.retriever import (
+    MultiModalVectorIndexRetriever,
+)
+from llama_index.llms import ChatMessage
+from llama_index.query_engine.multi_modal import SimpleMultiModalQueryEngine
+from llama_index.chat_engine.types import (
+    AGENT_CHAT_RESPONSE_TYPE,
+    StreamingAgentChatResponse,
+    AgentChatResponse,
+)
+from llama_index.llms.base import ChatResponse
+from typing import Generator
 
 
 class RAGParams(BaseModel):
@@ -82,17 +99,27 @@ def _resolve_llm(llm_str: str) -> LLM:
 
 
 def load_data(
-    file_names: Optional[List[str]] = None, urls: Optional[List[str]] = None
+    file_names: Optional[List[str]] = None,
+    directory: Optional[str] = None,
+    urls: Optional[List[str]] = None,
 ) -> List[Document]:
     """Load data."""
     file_names = file_names or []
+    directory = directory or ""
     urls = urls or []
-    if not file_names and not urls:
-        raise ValueError("Must specify either file_names or urls.")
-    elif file_names and urls:
-        raise ValueError("Must specify only one of file_names or urls.")
+
+    # get number depending on whether specified
+    num_specified = sum(1 for v in [file_names, urls, directory] if v)
+
+    if num_specified == 0:
+        raise ValueError("Must specify either file_names or urls or directory.")
+    elif num_specified > 1:
+        raise ValueError("Must specify only one of file_names or urls or directory.")
     elif file_names:
         reader = SimpleDirectoryReader(input_files=file_names)
+        docs = reader.load_data()
+    elif directory:
+        reader = SimpleDirectoryReader(input_dir=directory)
         docs = reader.load_data()
     elif urls:
         from llama_hub.web.simple_web.base import SimpleWebPageReader
@@ -101,7 +128,7 @@ def load_data(
         loader = SimpleWebPageReader()
         docs = loader.load_data(urls=urls)
     else:
-        raise ValueError("Must specify either file_names or urls.")
+        raise ValueError("Must specify either file_names or urls or directory.")
 
     return docs
 
@@ -326,3 +353,128 @@ def get_tool_objects(tool_names: List[str]) -> List:
             raise ValueError(f"Tool {tool_name} not recognized.")
 
     return tool_objs
+
+
+class MultimodalChatEngine(BaseChatEngine):
+    """Multimodal chat engine.
+
+    This chat engine is a light wrapper around a query engine.
+    Offers no real 'chat' functionality, is a beta feature.
+
+    """
+
+    def __init__(self, mm_query_engine: SimpleMultiModalQueryEngine) -> None:
+        """Init params."""
+        self._mm_query_engine = mm_query_engine
+
+    def reset(self) -> None:
+        """Reset conversation state."""
+        pass
+
+    @property
+    def chat_history(self) -> List[ChatMessage]:
+        return []
+
+    @trace_method("chat")
+    def chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> AGENT_CHAT_RESPONSE_TYPE:
+        """Main chat interface."""
+        # just return the top-k results
+        response = self._mm_query_engine.query(message)
+        return AgentChatResponse(
+            response=str(response), source_nodes=response.source_nodes
+        )
+
+    @trace_method("chat")
+    def stream_chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> StreamingAgentChatResponse:
+        """Stream chat interface."""
+        response = self._mm_query_engine.query(message)
+
+        def _chat_stream(response: str) -> Generator[ChatResponse, None, None]:
+            yield ChatResponse(message=ChatMessage(role="assistant", content=response))
+
+        chat_stream = _chat_stream(str(response))
+        return StreamingAgentChatResponse(
+            chat_stream=chat_stream, source_nodes=response.source_nodes
+        )
+
+    @trace_method("chat")
+    async def achat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> AGENT_CHAT_RESPONSE_TYPE:
+        """Async version of main chat interface."""
+        response = await self._mm_query_engine.aquery(message)
+        return AgentChatResponse(
+            response=str(response), source_nodes=response.source_nodes
+        )
+
+    @trace_method("chat")
+    async def astream_chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> StreamingAgentChatResponse:
+        """Async version of main chat interface."""
+        return self.stream_chat(message, chat_history)
+
+
+def construct_mm_agent(
+    system_prompt: str,
+    rag_params: RAGParams,
+    docs: List[Document],
+    mm_vector_index: Optional[VectorStoreIndex] = None,
+    additional_tools: Optional[List] = None,
+) -> Tuple[BaseChatEngine, Dict]:
+    """Construct agent from docs / parameters / indices.
+
+    NOTE: system prompt isn't used right now
+
+    """
+    extra_info = {}
+    additional_tools = additional_tools or []
+
+    # first resolve llm and embedding model
+    embed_model = resolve_embed_model(rag_params.embed_model)
+    # TODO: use OpenAI for now
+    os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+    openai_mm_llm = OpenAIMultiModal(model="gpt-4-vision-preview", max_new_tokens=1500)
+
+    # first let's index the data with the right parameters
+    service_context = ServiceContext.from_defaults(
+        chunk_size=rag_params.chunk_size,
+        embed_model=embed_model,
+    )
+
+    if mm_vector_index is None:
+        mm_vector_index = MultiModalVectorStoreIndex.from_documents(
+            docs, service_context=service_context
+        )
+    else:
+        pass
+
+    mm_retriever = mm_vector_index.as_retriever(similarity_top_k=rag_params.top_k)
+    mm_query_engine = SimpleMultiModalQueryEngine(
+        cast(MultiModalVectorIndexRetriever, mm_retriever),
+        multi_modal_llm=openai_mm_llm,
+    )
+
+    extra_info["vector_index"] = mm_vector_index
+
+    # use condense + context chat engine
+    agent = MultimodalChatEngine(mm_query_engine)
+
+    return agent, extra_info
+
+
+def get_image_and_text_nodes(
+    nodes: List[NodeWithScore],
+) -> Tuple[List[NodeWithScore], List[NodeWithScore]]:
+    image_nodes = []
+    text_nodes = []
+    for res_node in nodes:
+        if isinstance(res_node.node, ImageNode):
+            image_nodes.append(res_node)
+        else:
+            text_nodes.append(res_node)
+    return image_nodes, text_nodes

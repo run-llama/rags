@@ -1,6 +1,11 @@
 """Streamlit page showing builder config."""
 import streamlit as st
 from st_utils import add_sidebar, get_current_state
+from core.utils import get_image_and_text_nodes
+from llama_index.schema import MetadataMode
+from llama_index.chat_engine.types import AGENT_CHAT_RESPONSE_TYPE
+from typing import Dict, Optional
+import pandas as pd
 
 
 ####################
@@ -28,8 +33,36 @@ if (
     ]
 
 
-def add_to_message_history(role: str, content: str) -> None:
-    message = {"role": role, "content": str(content)}
+def display_sources(response: AGENT_CHAT_RESPONSE_TYPE) -> None:
+    image_nodes, text_nodes = get_image_and_text_nodes(response.source_nodes)
+    if len(image_nodes) > 0 or len(text_nodes) > 0:
+        with st.expander("Sources"):
+            # get image nodes
+            if len(image_nodes) > 0:
+                st.subheader("Images")
+                for image_node in image_nodes:
+                    st.image(image_node.metadata["file_path"])
+
+            if len(text_nodes) > 0:
+                st.subheader("Text")
+                sources_df_list = []
+                for text_node in text_nodes:
+                    sources_df_list.append(
+                        {
+                            "ID": text_node.id_,
+                            "Text": text_node.node.get_content(
+                                metadata_mode=MetadataMode.ALL
+                            ),
+                        }
+                    )
+                sources_df = pd.DataFrame(sources_df_list)
+                st.dataframe(sources_df)
+
+
+def add_to_message_history(
+    role: str, content: str, extra: Optional[Dict] = None
+) -> None:
+    message = {"role": role, "content": str(content), "extra": extra}
     st.session_state.agent_messages.append(message)  # Add response to message history
 
 
@@ -44,6 +77,11 @@ def display_messages() -> None:
                 st.info(message["content"], icon="ℹ️")
             else:
                 raise ValueError(f"Unknown message type: {msg_type}")
+
+            # display sources
+            if "extra" in message and isinstance(message["extra"], dict):
+                if "response" in message["extra"].keys():
+                    display_sources(message["extra"]["response"])
 
 
 # if agent is created, then we can chat with it
@@ -68,6 +106,13 @@ if current_state.cache is not None and current_state.cache.agent is not None:
             with st.spinner("Thinking..."):
                 response = agent.chat(str(prompt))
                 st.write(str(response))
-                add_to_message_history("assistant", str(response))
+
+                # display sources
+                # Multi-modal: check if image nodes are present
+                display_sources(response)
+
+                add_to_message_history(
+                    "assistant", str(response), extra={"response": response}
+                )
 else:
     st.info("Agent not created. Please create an agent in the above section.")
