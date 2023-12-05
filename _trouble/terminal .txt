@@ -1,0 +1,159 @@
+========================
+
+STARTING TURN 2
+---------------
+
+STARTING TURN 1
+---------------
+
+STARTING TURN 1
+---------------
+
+=== Calling Function ===
+Calling function: vector_tool with args: {"input":"Did the students in the 'Augmented Storytelling' class use tools from Pika Labs for generative AI storytelling?"}
+Got output: Empty Response
+========================
+
+STARTING TURN 2
+---------------
+
+STARTING TURN 1
+---------------
+
+2023-12-02 17:25:05.334 Uncaught app exception
+Traceback (most recent call last):
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 534, in _run_script
+    exec(code, module.__dict__)
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\1_🏠_Home.py", line 100, in <module>
+    response = st.session_state.builder_agent.chat(prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\callbacks\utils.py", line 39, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 438, in chat
+    chat_response = self._chat(
+                    ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 360, in _chat
+    agent_chat_response = self._get_agent_response(mode=mode, **llm_chat_kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 322, in _get_agent_response
+    chat_response: ChatResponse = self._llm.chat(**llm_chat_kwargs)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\base.py", line 187, in wrapped_llm_chat       
+    f_return_val = f(_self, messages, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 200, in chat
+    return chat_fn(messages, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 254, in _chat
+    response = self._client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_utils\_utils.py", line 299, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\resources\chat\completions.py", line 598, in create     
+    return self._post(
+           ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 1063, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 842, in request
+    return self._request(
+           ^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 885, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': "Invalid value for 'content': expected a string, got null.", 'type': 'invalid_request_error', 'param': 'messages.[122].content', 'code': None}}
+STARTING TURN 1
+---------------
+
+2023-12-02 17:25:32.422 Uncaught app exception
+Traceback (most recent call last):
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 534, in _run_script
+    exec(code, module.__dict__)
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\1_🏠_Home.py", line 100, in <module>
+    response = st.session_state.builder_agent.chat(prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\callbacks\utils.py", line 39, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 438, in chat
+    chat_response = self._chat(
+                    ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 360, in _chat
+    agent_chat_response = self._get_agent_response(mode=mode, **llm_chat_kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 322, in _get_agent_response
+    chat_response: ChatResponse = self._llm.chat(**llm_chat_kwargs)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\base.py", line 187, in wrapped_llm_chat       
+    f_return_val = f(_self, messages, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 200, in chat
+    return chat_fn(messages, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 254, in _chat
+    response = self._client.chat.completions.create(
+    response = self._client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_utils\_utils.py", line 299, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\resources\chat\completions.py", line 598, in create  
+    return self._post(
+           ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 1063, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 842, in request
+    return self._request(
+           ^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 885, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': "Invalid value for 'content': expected a string, got null.", 'type': 'invalid_request_error', 'param': 'messages.[122].content', 'code': None}}
+STARTING TURN 1
+---------------
+
+2023-12-02 17:39:37.033 Uncaught app exception
+Traceback (most recent call last):
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 534, in _run_script
+    exec(code, module.__dict__)
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\1_🏠_Home.py", line 100, in <module>
+    response = st.session_state.builder_agent.chat(prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\callbacks\utils.py", line 39, in wrapper        
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 438, in chat       
+    chat_response = self._chat(
+                    ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 360, in _chat      
+    agent_chat_response = self._get_agent_response(mode=mode, **llm_chat_kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\agent\openai_agent.py", line 322, in _get_agent_response
+    chat_response: ChatResponse = self._llm.chat(**llm_chat_kwargs)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\base.py", line 187, in wrapped_llm_chat    
+    f_return_val = f(_self, messages, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 200, in chat
+    return chat_fn(messages, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\llama_index\llms\openai.py", line 254, in _chat
+    response = self._client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_utils\_utils.py", line 299, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\resources\chat\completions.py", line 598, in create     
+    return self._post(
+           ^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 1063, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 842, in request
+    return self._request(
+           ^^^^^^^^^^^^^^
+  File "D:\Studio13\S13ManagedFab\run-llama\rags\.venv\Lib\site-packages\openai\_base_client.py", line 885, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': "Invalid value for 'content': expected a string, got null.", 'type': 'invalid_request_error', 'param': 'messages.[122].content', 'code': None}}
+
