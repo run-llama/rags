@@ -6,3 +6,4 @@ llama-hub==0.0.44
 langchain==0.0.305
 pypdf
 getenv
+metaphor-python
