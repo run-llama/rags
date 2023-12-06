@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_pills import pills
+import os
 
 from st_utils import (
     add_builder_config,
@@ -29,7 +30,8 @@ st.info(
     "To build a new agent, please make sure that 'Create a new agent' is selected.",
     icon="ℹ️",
 )
-if "metaphor_key" in st.secrets:
+# if "metaphor_key" in st.secrets:
+if "metaphor_key" in os.environ:
     st.info("**NOTE**: The ability to add web search is enabled.")
 
 

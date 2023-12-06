@@ -80,18 +80,18 @@ def _resolve_llm(llm_str: str) -> LLM:
     # - if there is, resolve it
     tokens = llm_str.split(":")
     if len(tokens) == 1:
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
         llm: LLM = OpenAI(model=llm_str)
     elif tokens[0] == "local":
         llm = resolve_llm(llm_str)
     elif tokens[0] == "openai":
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+        # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
         llm = OpenAI(model=tokens[1])
     elif tokens[0] == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
+        # os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
         llm = Anthropic(model=tokens[1])
     elif tokens[0] == "replicate":
-        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
+        # os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
         llm = Replicate(model=tokens[1])
     else:
         raise ValueError(f"LLM {llm_str} not recognized.")
@@ -305,7 +305,8 @@ def get_web_agent_tool() -> QueryEngineTool:
 
     # TODO: set metaphor API key
     metaphor_tool = MetaphorToolSpec(
-        api_key=st.secrets.metaphor_key,
+        #api_key=st.secrets.metaphor_key,
+        api_key=os.environ["METAPHOR_KEY"],
     )
     metaphor_tool_list = metaphor_tool.to_tool_list()
 
@@ -437,7 +438,7 @@ def construct_mm_agent(
     # first resolve llm and embedding model
     embed_model = resolve_embed_model(rag_params.embed_model)
     # TODO: use OpenAI for now
-    os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
+    # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
     openai_mm_llm = OpenAIMultiModal(model="gpt-4-vision-preview", max_new_tokens=1500)
 
     # first let's index the data with the right parameters
