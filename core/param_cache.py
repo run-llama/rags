@@ -11,7 +11,13 @@ from llama_index.chat_engine.types import BaseChatEngine
 from pathlib import Path
 import json
 import uuid
-from core.utils import load_data, get_tool_objects, construct_agent, RAGParams
+from core.utils import (
+    load_data,
+    get_tool_objects,
+    construct_agent,
+    RAGParams,
+    construct_mm_agent,
+)
 
 
 class ParamCache(BaseModel):
@@ -37,6 +43,10 @@ class ParamCache(BaseModel):
     urls: List[str] = Field(
         default_factory=list, description="URLs as data source (if specified)"
     )
+    directory: Optional[str] = Field(
+        default=None, description="Directory as data source (if specified)"
+    )
+
     docs: List = Field(default_factory=list, description="Documents for RAG agent.")
     # tools
     tools: List = Field(
@@ -48,6 +58,9 @@ class ParamCache(BaseModel):
     )
 
     # agent params
+    builder_type: str = Field(
+        default="default", description="Builder type (default, multimodal)."
+    )
     vector_index: Optional[VectorStoreIndex] = Field(
         default=None, description="Vector index for RAG agent."
     )
@@ -66,9 +79,11 @@ class ParamCache(BaseModel):
             "system_prompt": self.system_prompt,
             "file_names": self.file_names,
             "urls": self.urls,
+            "directory": self.directory,
             # TODO: figure out tools
             "tools": self.tools,
             "rag_params": self.rag_params.dict(),
+            "builder_type": self.builder_type,
             "agent_id": self.agent_id,
         }
         # store the vector store within the agent
@@ -88,13 +103,22 @@ class ParamCache(BaseModel):
         save_dir: str,
     ) -> "ParamCache":
         """Load cache from disk."""
+        with open(Path(save_dir) / "cache.json", "r") as f:
+            cache_dict = json.load(f)
+
         storage_context = StorageContext.from_defaults(
             persist_dir=str(Path(save_dir) / "storage")
         )
-        vector_index = cast(VectorStoreIndex, load_index_from_storage(storage_context))
+        if cache_dict["builder_type"] == "multimodal":
+            from llama_index.indices.multi_modal.base import MultiModalVectorStoreIndex
 
-        with open(Path(save_dir) / "cache.json", "r") as f:
-            cache_dict = json.load(f)
+            vector_index: VectorStoreIndex = cast(
+                MultiModalVectorStoreIndex, load_index_from_storage(storage_context)
+            )
+        else:
+            vector_index = cast(
+                VectorStoreIndex, load_index_from_storage(storage_context)
+            )
 
         # replace rag params with RAGParams object
         cache_dict["rag_params"] = RAGParams(**cache_dict["rag_params"])
@@ -102,18 +126,30 @@ class ParamCache(BaseModel):
         # add in the missing fields
         # load docs
         cache_dict["docs"] = load_data(
-            file_names=cache_dict["file_names"], urls=cache_dict["urls"]
+            file_names=cache_dict["file_names"],
+            urls=cache_dict["urls"],
+            directory=cache_dict["directory"],
         )
         # load agent from index
         additional_tools = get_tool_objects(cache_dict["tools"])
-        agent, _ = construct_agent(
-            cache_dict["system_prompt"],
-            cache_dict["rag_params"],
-            cache_dict["docs"],
-            vector_index=vector_index,
-            additional_tools=additional_tools,
-            # TODO: figure out tools
-        )
+
+        if cache_dict["builder_type"] == "multimodal":
+            vector_index = cast(MultiModalVectorStoreIndex, vector_index)
+            agent, _ = construct_mm_agent(
+                cache_dict["system_prompt"],
+                cache_dict["rag_params"],
+                cache_dict["docs"],
+                mm_vector_index=vector_index,
+            )
+        else:
+            agent, _ = construct_agent(
+                cache_dict["system_prompt"],
+                cache_dict["rag_params"],
+                cache_dict["docs"],
+                vector_index=vector_index,
+                additional_tools=additional_tools,
+                # TODO: figure out tools
+            )
         cache_dict["vector_index"] = vector_index
         cache_dict["agent"] = agent
 

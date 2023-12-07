@@ -4,7 +4,7 @@ import streamlit as st
 from core.param_cache import (
     RAGParams,
 )
-from core.agent_builder import (
+from core.agent_builder.loader import (
     RAGAgentBuilder,
     AgentCacheRegistry,
 )
@@ -93,14 +93,24 @@ if current_state.agent_builder is not None:
     )
 
     rag_params = cast(RAGParams, current_state.cache.rag_params)
-    file_names = st.text_input(
-        "File names (not editable)",
-        value=",".join(current_state.cache.file_names),
-        disabled=True,
-    )
-    urls = st.text_input(
-        "URLs (not editable)", value=",".join(current_state.cache.urls), disabled=True
-    )
+
+    with st.expander("Loaded Data (Expand to view)"):
+        file_names = st.text_input(
+            "File names (not editable)",
+            value=",".join(current_state.cache.file_names),
+            disabled=True,
+        )
+        directory = st.text_input(
+            "Directory (not editable)",
+            value=current_state.cache.directory,
+            disabled=True,
+        )
+        urls = st.text_input(
+            "URLs (not editable)",
+            value=",".join(current_state.cache.urls),
+            disabled=True,
+        )
+
     include_summarization_st = st.checkbox(
         "Include Summarization (only works for GPT-4)",
         value=rag_params.include_summarization,
