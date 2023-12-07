@@ -29,12 +29,14 @@ poetry install --with dev
 ```
 
 By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
-Add `.streamlit/secrets.toml` in the home folder. Get the metaphor api key from the [metaphor website](https://metaphor.systems/)
+Add `.streamlit/secrets.toml` in the home folder.   
+
+(Optional) Get the metaphor api key from the [metaphor website](https://metaphor.systems/) for the web search.
 
 Then put the following:
 ```
 openai_key = "<openai_key>"
-metaphor_key="<metaphor_key>"
+metaphor_key="<metaphor_key>" #optional
 ```
 
 
