@@ -30,6 +30,8 @@ st.info(
     "To build a new agent, please make sure that 'Create a new agent' is selected.",
     icon="ℹ️",
 )
+# removing all use of st.secrets
+# relying on good old fashioned env vars
 # if "metaphor_key" in st.secrets:
 if "metaphor_key" in os.environ:
     st.info("**NOTE**: The ability to add web search is enabled.")

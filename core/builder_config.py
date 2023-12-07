@@ -1,7 +1,9 @@
 """Configuration."""
-import streamlit as st
+# no streamlit import here, to ensure we aren't relying on streamlit
+# import streamlit as st
+# adding os to allow for env vars
 import os
-import getenv
+
 
 ### DEFINE BUILDER_LLM #####
 ## Uncomment the LLM you want to use to construct the meta agent
@@ -11,16 +13,11 @@ from llama_index.llms import OpenAI
 
 # nickknyc's OpenAI key routine
 openai_api_key = os.getenv("OPENAI_API_KEY")
-# os.environ["OPENAI_API_KEY"] = openai_api_key
-
-# metaphor_key = os.getenv("METAPHOR_KEY")
-# os.environ["METAPHOR_KEY"] = metaphor_key
-# st.secrets.metaphor_key = metaphor_key
-
+# removing Streamlit secrets in favor of env vars
 # set OpenAI Key - use Streamlit secrets
 # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
 # load LLM
-BUILDER_LLM = OpenAI(model="gpt-4-1106-preview")
+BUILDER_LLM = OpenAI(model="gpt-4-1106-preview",api_key=openai_api_key)
 
 # # Anthropic (make sure you `pip install anthropic`)
 # from llama_index.llms import Anthropic

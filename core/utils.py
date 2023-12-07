@@ -80,6 +80,8 @@ def _resolve_llm(llm_str: str) -> LLM:
     # - if there is, resolve it
     tokens = llm_str.split(":")
     if len(tokens) == 1:
+        # removing all instances of relying on st.secrets
+        # because using env vars is more well understood and works in all cases
         # os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
         llm: LLM = OpenAI(model=llm_str)
     elif tokens[0] == "local":
