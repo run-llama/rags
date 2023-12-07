@@ -2,3 +2,5 @@
 .streamlit
 .venv
 __pycache__
+.env
+_trouble/
