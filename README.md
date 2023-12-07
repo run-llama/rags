@@ -17,18 +17,26 @@ This project is inspired by [GPTs](https://openai.com/blog/introducing-gpts), la
 
 ## Installation and Setup 
 
-Clone this project, go into the `rags` project folder. We recommend creating a virtual env for dependencies (`python3 -m venv .venv`).
+Clone this project, go into the `rags` project folder. We recommend creating a virtual env for dependencies. Run the following to create and activate virtualenv. 
+```
+python3 -m venv .venv && source .venv/bin/activate)
+````
+
+Once the virtual environment is activated, run the following to install the dependencies.
 
 ```
 poetry install --with dev
 ```
 
 By default, we use OpenAI for both the builder agent as well as the generated RAG agent.
-Add `.streamlit/secrets.toml` in the home folder.
+Add `.streamlit/secrets.toml` in the home folder.   
+
+(Optional) Get the metaphor api key from the [metaphor website](https://metaphor.systems/) for the web search.
 
 Then put the following:
 ```
 openai_key = "<openai_key>"
+metaphor_key="<metaphor_key>" #optional
 ```
 
 
