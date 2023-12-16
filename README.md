@@ -103,10 +103,25 @@ You can set the configuration either through natural language or manually for bo
 - **Embeddings**: Supports text-embedding-ada-002 by default, but also supports Hugging Face models. To use a hugging face model simply prepend with local, e.g. local:BAAI/bge-small-en.
 
 
+
+
+## Running into issues? 
+Please file a GitHub issue or join our [Discord](https://discord.gg/dGcwcsnxhU).
+
+When raising an issue please be as descriptive as possible, so others can try to reproduce the issue.
+Please following these steps:
+
+### Provide a Title
+Write a concise and descriptive title for your issue. This should give a quick overview of the problem or feature you're addressing.
+
+###  Describe the Issue
+Please provide a detailed description of the issue. Include information such as:
+Steps to reproduce the problem (if it's a bug).
+The expected behavior.
+The actual behavior (if it's a bug).
+Screenshots or code snippets, if applicable.
+
 ## Resources
-
-Running into issues? Please file a GitHub issue or join our [Discord](https://discord.gg/dGcwcsnxhU).
-
 This app was built with [LlamaIndex Python](https://github.com/run-llama/llama_index).
 
 See our launch blog post [here](https://blog.llamaindex.ai/introducing-rags-your-personalized-chatgpt-experience-over-your-data-2b9d140769b1).
