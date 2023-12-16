@@ -71,30 +71,26 @@ class RAGParams(BaseModel):
         default="gpt-4-1106-preview", description="LLM to use for summarization."
     )
 
-
 def _resolve_llm(llm_str: str) -> LLM:
     """Resolve LLM."""
-    # TODO: make this less hardcoded with if-else statements
-    # see if there's a prefix
-    # - if there isn't, assume it's an OpenAI model
-    # - if there is, resolve it
+    llm_mapping = {
+        "": OpenAI,
+        "local": resolve_llm,
+        "openai": OpenAI,
+        "anthropic": Anthropic,
+        "replicate": Replicate,
+    }
+
     tokens = llm_str.split(":")
     if len(tokens) == 1:
         os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm: LLM = OpenAI(model=llm_str)
-    elif tokens[0] == "local":
-        llm = resolve_llm(llm_str)
-    elif tokens[0] == "openai":
-        os.environ["OPENAI_API_KEY"] = st.secrets.openai_key
-        llm = OpenAI(model=tokens[1])
-    elif tokens[0] == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets.anthropic_key
-        llm = Anthropic(model=tokens[1])
-    elif tokens[0] == "replicate":
-        os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
-        llm = Replicate(model=tokens[1])
+    elif tokens[0] in llm_mapping:
+        os.environ[f"{tokens[0].upper()}_API_KEY"] = getattr(st.secrets, f"{tokens[0]}_key")
     else:
         raise ValueError(f"LLM {llm_str} not recognized.")
+
+    llm_class = llm_mapping.get(tokens[0], OpenAI)
+    llm = llm_class(model=tokens[1]) if len(tokens) > 1 else llm_class()
     return llm
 
 
