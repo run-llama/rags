@@ -2,3 +2,4 @@
 .streamlit
 .venv
 __pycache__
+data/*
