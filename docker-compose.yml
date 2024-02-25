@@ -1,0 +1,15 @@
+version: '3.8'
+name: rags
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./.streamlit:/root/.streamlit
+      - ./cache/agents:/app/cache/agents
+      - ./cache/messages:/app/cache/messages
+      - ./data:/app/data
