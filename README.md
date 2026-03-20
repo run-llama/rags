@@ -31,6 +31,13 @@ Then put the following:
 openai_key = "<openai_key>"
 ```
 
+To use additional LLM providers, add their API keys:
+```
+anthropic_key = "<anthropic_key>"
+replicate_key = "<replicate_key>"
+minimax_key = "<minimax_key>"
+```
+
 
 Then run the app from the "home page" file.
 
@@ -99,6 +106,7 @@ You can set the configuration either through natural language or manually for bo
     - OpenAI: ID is "openai:<model_name>" e.g. "openai:gpt-4-1106-preview"
     - Anthropic: ID is "anthropic:<model_name>" e.g. "anthropic:claude-2"
     - Replicate: ID is "replicate:<model_name>"
+    - MiniMax: ID is "minimax:<model_name>" e.g. "minimax:MiniMax-M2.7" or "minimax:MiniMax-M2.7-highspeed"
     - HuggingFace: ID is "local:<model_name>" e.g. "local:BAAI/bge-small-en"
 - **Embeddings**: Supports text-embedding-ada-002 by default, but also supports Hugging Face models. To use a hugging face model simply prepend with local, e.g. local:BAAI/bge-small-en.
 

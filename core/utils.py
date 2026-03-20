@@ -93,6 +93,13 @@ def _resolve_llm(llm_str: str) -> LLM:
     elif tokens[0] == "replicate":
         os.environ["REPLICATE_API_KEY"] = st.secrets.replicate_key
         llm = Replicate(model=tokens[1])
+    elif tokens[0] == "minimax":
+        llm = OpenAI(
+            model=tokens[1],
+            api_key=st.secrets.minimax_key,
+            api_base="https://api.minimax.io/v1",
+            temperature=1.0,
+        )
     else:
         raise ValueError(f"LLM {llm_str} not recognized.")
     return llm
